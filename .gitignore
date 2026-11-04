@@ -1,0 +1,60 @@
+node_modules/
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+*.swp
+*.swo
+*~
+.DS_Store
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+/bin/
+/tmp/
+.vscode/
+*.iml
+.idea/
+
+# React Native / Expo
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Database
+*.db
+*.sqlite
+.pgpass
+
+# Logs
+logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
