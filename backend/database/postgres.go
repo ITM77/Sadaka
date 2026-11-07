@@ -1,62 +1,74 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"sadaka.tj/backend/config"
 	"sadaka.tj/backend/models"
+	"sadaka.tj/backend/utils"
 )
 
-func InitDB(cfg *config.Config) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Ошибка подключения к БД: %v", err)
+// Connect подключается к PostgreSQL и приводит схему в соответствие моделям.
+func Connect(cfg *config.Config) (*gorm.DB, error) {
+	logLevel := logger.Warn
+	if !cfg.IsProduction() {
+		logLevel = logger.Info
 	}
-
-	// Auto migrate models
-	err = db.AutoMigrate(
-		&models.User{},
-		&models.Mosque{},
-		&models.Campaign{},
-		&models.Transaction{},
-		&models.Report{},
-		&models.SavobPoints{},
-		&models.SavobHistory{},
-		&models.Admin{},
-		&models.Notification{},
-	)
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
+		Logger:         logger.Default.LogMode(logLevel),
+		TranslateError: true, // нарушение уникальности → gorm.ErrDuplicatedKey
+	})
 	if err != nil {
-		log.Fatalf("Ошибка миграции: %v", err)
+		return nil, fmt.Errorf("подключение к БД: %w", err)
 	}
-
-	log.Println("✅ База данных инициализирована")
-	return db
+	if err := db.AutoMigrate(models.All()...); err != nil {
+		return nil, fmt.Errorf("миграция: %w", err)
+	}
+	return db, nil
 }
 
-func MigrateSQL(db *gorm.DB) error {
-	// Создание индексов
-	db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone_number);
-		CREATE INDEX IF NOT EXISTS idx_mosques_city ON mosques(city);
-		CREATE INDEX IF NOT EXISTS idx_campaigns_mosque ON campaigns(mosque_id);
-		CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
-		CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
-		CREATE INDEX IF NOT EXISTS idx_transactions_campaign ON transactions(campaign_id);
-		CREATE INDEX IF NOT EXISTS idx_savob_user ON savob_points(user_id);
-		CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-	`)
-
-	fmt.Println("✅ Индексы созданы")
-	return nil
-}
-
-func CloseDB(db *gorm.DB) error {
-	sqlDB, err := db.DB()
+// BootstrapAdmin создаёт первого суперадмина Комитета, если админов ещё нет
+// и заданы ADMIN_BOOTSTRAP_EMAIL / ADMIN_BOOTSTRAP_PASSWORD.
+func BootstrapAdmin(db *gorm.DB, cfg *config.Config) error {
+	var count int64
+	if err := db.Model(&models.Admin{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	if cfg.AdminBootstrapEmail == "" || cfg.AdminBootstrapPassword == "" {
+		log.Println("⚠ В базе нет ни одного админа Комитета. Задайте ADMIN_BOOTSTRAP_EMAIL и ADMIN_BOOTSTRAP_PASSWORD и перезапустите сервер.")
+		return nil
+	}
+	email := strings.ToLower(strings.TrimSpace(cfg.AdminBootstrapEmail))
+	if err := utils.ValidateEmail(email); err != nil {
+		return errors.New("ADMIN_BOOTSTRAP_EMAIL: " + err.Error())
+	}
+	if err := utils.ValidatePassword(cfg.AdminBootstrapPassword); err != nil {
+		return errors.New("ADMIN_BOOTSTRAP_PASSWORD: " + err.Error())
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(cfg.AdminBootstrapPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	return sqlDB.Close()
+	admin := models.Admin{
+		Email:        email,
+		FullName:     cfg.AdminBootstrapName,
+		PasswordHash: string(hash),
+		Role:         models.AdminRoleSuperadmin,
+		IsActive:     true,
+	}
+	if err := db.Create(&admin).Error; err != nil {
+		return err
+	}
+	log.Printf("✅ Создан суперадмин Комитета: %s", email)
+	return nil
 }

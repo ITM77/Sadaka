@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      # Схему создаёт бэкенд (GORM AutoMigrate), database/schema.sql устарел.
     networks:
       - sadaka_network
     healthcheck:
@@ -39,43 +39,24 @@ services:
     build: ./backend
     container_name: sadaka_backend
     environment:
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/sadaka
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/sadaka?sslmode=disable
       PORT: 8080
-      JWT_SECRET: your-super-secret-jwt-key-change-this
       ENV: development
+      PAYMENT_PROVIDER: mock
+      CORS_ORIGINS: "*"
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - sadaka_network
-    volumes:
-      - ./backend:/app
-    command: go run main.go
-
-  # Admin Panel (React Vite)
-  admin:
-    image: node:18-alpine
-    container_name: sadaka_admin
-    working_dir: /app
-    volumes:
-      - ./admin-panel:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:8080/api/v1
-    command: sh -c "npm install && npm run dev"
     networks:
       - sadaka_network
 
-  # Website (Next.js)
+  # Website (Next.js): публичный сайт, кабинет мечети и панель Комитета (/admin)
   website:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: sadaka_website
     working_dir: /app
     volumes:
@@ -84,7 +65,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      API_URL: http://backend:8080/api/v1
     command: sh -c "npm install && npm run dev"
     networks:
       - sadaka_network
@@ -101,7 +82,6 @@ services:
       - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
-      - admin
       - website
     networks:
       - sadaka_network

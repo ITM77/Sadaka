@@ -1,37 +1,16 @@
-FROM golang:1.21-alpine AS builder
-
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache git make
-
-# Copy go mod files
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy source code
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /sadaka-api .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-# Final stage
-FROM alpine:latest
-
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy binary from builder
-COPY --from=builder /app/main .
-
-# Copy environment file
-COPY .env .env.example ./
-
-# Expose port
+FROM alpine:3.22
+RUN apk --no-cache add ca-certificates && adduser -D -H app
+USER app
+COPY --from=builder /sadaka-api /sadaka-api
 EXPOSE 8080
-
-# Run the application
-CMD ["./main"]
+# Настройки передаются переменными окружения (см. .env.example).
+CMD ["/sadaka-api"]

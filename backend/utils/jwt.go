@@ -1,63 +1,54 @@
 package utils
 
 import (
-	"fmt"
-	"os"
+	"errors"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-type JWTClaims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Phone  string    `json:"phone"`
-	Role   string    `json:"role"` // "user", "mosque", "admin"
-	jwt.StandardClaims
+// Субъекты токена.
+const (
+	SubjectUser  = "user"  // жертвователь / представитель мечети
+	SubjectAdmin = "admin" // сотрудник Комитета улемов
+)
+
+const tokenTTL = 7 * 24 * time.Hour
+
+type Claims struct {
+	Kind      string `json:"kind"`                 // SubjectUser | SubjectAdmin
+	AdminRole string `json:"admin_role,omitempty"` // только для админов
+	jwt.RegisteredClaims
 }
 
-func GenerateJWT(userID uuid.UUID, phone string, role string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "your-secret-key-change-in-production"
-	}
+func (c *Claims) AccountID() (uuid.UUID, error) { return uuid.Parse(c.Subject) }
 
-	claims := &JWTClaims{
-		UserID: userID,
-		Phone:  phone,
-		Role:   role,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(), // 7 дней
-			IssuedAt:  time.Now().Unix(),
-			Id:        userID.String(),
+func IssueToken(secret string, id uuid.UUID, kind, adminRole string) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		Kind:      kind,
+		AdminRole: adminRole,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   id.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(tokenTTL)),
+			Issuer:    "sadaka",
 		},
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }
 
-func VerifyJWT(tokenString string) (*JWTClaims, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "your-secret-key-change-in-production"
-	}
-
-	claims := &JWTClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("неожиданный метод подписания: %v", token.Header["alg"])
-		}
+func ParseToken(secret, token string) (*Claims, error) {
+	claims := &Claims{}
+	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (any, error) {
 		return []byte(secret), nil
-	})
-
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithIssuer("sadaka"))
 	if err != nil {
 		return nil, err
 	}
-
-	if !token.Valid {
-		return nil, fmt.Errorf("невалидный токен")
+	if claims.Kind != SubjectUser && claims.Kind != SubjectAdmin {
+		return nil, errors.New("неизвестный тип токена")
 	}
-
 	return claims, nil
 }

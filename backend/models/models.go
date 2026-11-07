@@ -1,173 +1,208 @@
+// Package models — сущности БД. Модели GORM — единственный источник правды
+// для схемы: таблицы создаются через AutoMigrate (см. database.Connect).
 package models
 
 import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
-// User — Жертвователь
+func init() {
+	// Деньги отдаются в JSON числом (500.5), а не строкой ("500.5").
+	decimal.MarshalJSONWithoutQuotes = true
+}
+
+// Base — общий первичный ключ и метки времени.
+type Base struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (b *Base) BeforeCreate(*gorm.DB) error {
+	if b.ID == uuid.Nil {
+		b.ID = uuid.New()
+	}
+	return nil
+}
+
+// ---------- Пользователи ----------
+
+// User — жертвователь. Он же может быть представителем мечети:
+// мечеть привязывается к пользователю через Mosque.OwnerID.
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	PhoneNumber  string    `gorm:"uniqueIndex"`
-	FullName     string
-	Email        string
-	PasswordHash string
-	IsVerified   bool      `gorm:"default:false"`
-	AvatarURL    string
-	Language     string    `gorm:"default:'tj'"`
-	CreatedAt    time.Time `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
-	DeletedAt    *time.Time
-
-	// Relations
-	Transactions []Transaction `gorm:"foreignKey:UserID"`
-	SavobPoints  *SavobPoints  `gorm:"foreignKey:UserID"`
+	Base
+	PhoneNumber  string `gorm:"size:20;uniqueIndex;not null" json:"phone_number"`
+	FullName     string `gorm:"size:255;not null" json:"full_name"`
+	Email        string `gorm:"size:255" json:"email,omitempty"`
+	PasswordHash string `gorm:"size:255;not null" json:"-"`
+	IsVerified   bool   `gorm:"not null;default:false" json:"is_verified"`
+	Language     string `gorm:"size:5;not null;default:tg" json:"language"`
 }
 
-// Mosque — Мечеть
-type Mosque struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name         string
-	Description  string
-	Address      string
-	City         string
-	Latitude     float64
-	Longitude    float64
-	Phone        string
-	ImamName     string
-	ImamPhone    string
-	LogoURL      string
-	PhotoURLs    string // JSON array
-	QRCodeURL    string
-	Status       string    `gorm:"default:'pending'"` // pending, approved, rejected, blocked
-	Rating       float32   `gorm:"default:5.0"`
-	CreatedAt    time.Time `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
-	DeletedAt    *time.Time
+// Роли Комитета улемов.
+const (
+	AdminRoleSuperadmin = "superadmin" // всё, включая блокировку мечетей
+	AdminRoleModerator  = "moderator"  // одобрение мечетей, кампаний, отчётов
+	AdminRoleAnalyst    = "analyst"    // только просмотр
+)
 
-	// Relations
-	Campaigns    []Campaign    `gorm:"foreignKey:MosqueID"`
-	Transactions []Transaction `gorm:"foreignKey:MosqueID"`
-	Reports      []Report      `gorm:"foreignKey:MosqueID"`
-}
-
-// Campaign — Кампания сбора
-type Campaign struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	MosqueID      uuid.UUID
-	Title         string
-	Description   string
-	GoalAmount    float64
-	CurrentAmount float64 `gorm:"default:0"`
-	StartDate     time.Time
-	EndDate       time.Time
-	Status        string    `gorm:"default:'draft'"` // draft, pending_approval, approved, active, completed, cancelled
-	Category      string    // repairs, education, welfare
-	CreatedAt     time.Time `gorm:"autoCreateTime"`
-	UpdatedAt     time.Time `gorm:"autoUpdateTime"`
-	DeletedAt     *time.Time
-
-	// Relations
-	Mosque       *Mosque        `gorm:"foreignKey:MosqueID"`
-	Transactions []Transaction  `gorm:"foreignKey:CampaignID"`
-	Report       *Report        `gorm:"foreignKey:CampaignID"`
-}
-
-// Transaction — Транзакция / Пожертвование
-type Transaction struct {
-	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID            uuid.UUID
-	CampaignID        uuid.UUID
-	MosqueID          uuid.UUID
-	Amount            float64
-	PaymentMethod     string `gorm:"default:'card'"` // card, mobile_wallet, qr, bank_transfer
-	PaymentGatewayID  string // stripe_id, alif_id, imon_id
-	Status            string `gorm:"default:'pending'"` // pending, completed, failed, refunded
-	TransactionHash   string `gorm:"uniqueIndex"`
-	Currency          string `gorm:"default:'TJS'"`
-	CreatedAt         time.Time `gorm:"autoCreateTime"`
-	UpdatedAt         time.Time `gorm:"autoUpdateTime"`
-
-	// Relations
-	User      *User     `gorm:"foreignKey:UserID"`
-	Campaign  *Campaign `gorm:"foreignKey:CampaignID"`
-	Mosque    *Mosque   `gorm:"foreignKey:MosqueID"`
-	SavobLog  *SavobHistory `gorm:"foreignKey:TransactionID"`
-}
-
-// Report — Отчёт об использовании средств
-type Report struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	CampaignID    uuid.UUID `gorm:"uniqueIndex"`
-	MosqueID      uuid.UUID
-	Title         string
-	Description   string
-	TotalCollected float64
-	Expenses      string // JSON: [{item: "...", cost: 100}]
-	PhotoURLs     string // JSON array
-	Status        string `gorm:"default:'draft'"` // draft, submitted, approved, rejected
-	SubmittedAt   *time.Time
-	CreatedAt     time.Time `gorm:"autoCreateTime"`
-	UpdatedAt     time.Time `gorm:"autoUpdateTime"`
-
-	// Relations
-	Campaign *Campaign `gorm:"foreignKey:CampaignID"`
-	Mosque   *Mosque   `gorm:"foreignKey:MosqueID"`
-}
-
-// SavobPoints — Баллы Савоб пользователя
-type SavobPoints struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"uniqueIndex"`
-	Points      int       `gorm:"default:0"` // текущие баллы
-	TotalPoints int       `gorm:"default:0"` // всего накоплено
-	LastUpdated time.Time `gorm:"autoUpdateTime"`
-
-	// Relations
-	User    *User            `gorm:"foreignKey:UserID"`
-	History []SavobHistory   `gorm:"foreignKey:UserID"`
-}
-
-// SavobHistory — История начисления Савоб
-type SavobHistory struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID        uuid.UUID
-	TransactionID *uuid.UUID
-	PointsEarned  int
-	Multiplier    float32 `gorm:"default:1.0"` // 1.0, 2.0 (Рамадан), 3.0 (Курбан)
-	EventType     string  // regular, ramadan, kurban, special_event
-	CreatedAt     time.Time `gorm:"autoCreateTime"`
-
-	// Relations
-	Transaction *Transaction `gorm:"foreignKey:TransactionID"`
-}
-
-// Admin — Администратор (Комитет улемов)
+// Admin — сотрудник Комитета улемов.
 type Admin struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Email     string    `gorm:"uniqueIndex"`
-	FullName  string
-	PasswordHash string
-	Role      string    `gorm:"default:'moderator'"` // superadmin, moderator, analyst
-	IsActive  bool      `gorm:"default:true"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	LastLogin *time.Time
+	Base
+	Email        string     `gorm:"size:255;uniqueIndex;not null" json:"email"`
+	FullName     string     `gorm:"size:255;not null" json:"full_name"`
+	PasswordHash string     `gorm:"size:255;not null" json:"-"`
+	Role         string     `gorm:"size:20;not null;default:moderator" json:"role"`
+	IsActive     bool       `gorm:"not null;default:true" json:"is_active"`
+	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 }
 
-// Notification — Уведомление
-type Notification struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID    *uuid.UUID
-	AdminID   *uuid.UUID
-	Type      string // campaign_approved, payment_received, report_submitted
-	Title     string
-	Message   string
-	IsRead    bool      `gorm:"default:false"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	ReadAt    *time.Time
+// ---------- Мечети ----------
 
-	// Relations
-	User  *User  `gorm:"foreignKey:UserID"`
-	Admin *Admin `gorm:"foreignKey:AdminID"`
+const (
+	MosqueStatusPending  = "pending"
+	MosqueStatusApproved = "approved"
+	MosqueStatusRejected = "rejected"
+	MosqueStatusBlocked  = "blocked"
+)
+
+type Mosque struct {
+	Base
+	OwnerID        uuid.UUID `gorm:"type:uuid;not null;index" json:"owner_id"`
+	Name           string    `gorm:"size:255;not null" json:"name"`
+	Description    string    `gorm:"type:text" json:"description"`
+	Address        string    `gorm:"size:500;not null" json:"address"`
+	City           string    `gorm:"size:100;not null;index" json:"city"`
+	Latitude       *float64  `json:"latitude"`
+	Longitude      *float64  `json:"longitude"`
+	Phone          string    `gorm:"size:20" json:"phone"`
+	ImamName       string    `gorm:"size:255" json:"imam_name"`
+	ImamPhone      string    `gorm:"size:20" json:"imam_phone,omitempty"`
+	LogoURL        string    `gorm:"size:500" json:"logo_url,omitempty"`
+	PhotoURLs      []string  `gorm:"serializer:json;type:text" json:"photo_urls"`
+	Status         string    `gorm:"size:20;not null;default:pending;index" json:"status"`
+	ModerationNote string    `gorm:"type:text" json:"moderation_note,omitempty"`
+}
+
+// ---------- Кампании ----------
+
+// Жизненный цикл: draft → pending_approval → active → completed.
+// Комитет может отклонить (rejected); отклонённую кампанию можно
+// исправить — она снова станет черновиком.
+const (
+	CampaignStatusDraft           = "draft"
+	CampaignStatusPendingApproval = "pending_approval"
+	CampaignStatusActive          = "active"
+	CampaignStatusRejected        = "rejected"
+	CampaignStatusCompleted       = "completed"
+)
+
+type Campaign struct {
+	Base
+	MosqueID       uuid.UUID       `gorm:"type:uuid;not null;index" json:"mosque_id"`
+	Mosque         *Mosque         `json:"mosque,omitempty"`
+	Title          string          `gorm:"size:255;not null" json:"title"`
+	Description    string          `gorm:"type:text" json:"description"`
+	Category       string          `gorm:"size:50" json:"category"`
+	GoalAmount     decimal.Decimal `gorm:"type:numeric(15,2);not null" json:"goal_amount"`
+	CurrentAmount  decimal.Decimal `gorm:"type:numeric(15,2);not null;default:0" json:"current_amount"`
+	DonationCount  int             `gorm:"not null;default:0" json:"donation_count"`
+	StartDate      time.Time       `gorm:"not null" json:"start_date"`
+	EndDate        time.Time       `gorm:"not null" json:"end_date"`
+	Status         string          `gorm:"size:25;not null;default:draft;index" json:"status"`
+	ModerationNote string          `gorm:"type:text" json:"moderation_note,omitempty"`
+	ApprovedAt     *time.Time      `json:"approved_at,omitempty"`
+	CompletedAt    *time.Time      `json:"completed_at,omitempty"`
+}
+
+// ---------- Пожертвования ----------
+
+const (
+	TransactionStatusPending   = "pending"
+	TransactionStatusCompleted = "completed"
+	TransactionStatusFailed    = "failed"
+)
+
+// Способы оплаты.
+var PaymentMethods = map[string]bool{
+	"card": true, // Visa / Mastercard / Корти Милли
+	"alif": true,
+	"imon": true,
+	"qr":   true,
+}
+
+type Transaction struct {
+	Base
+	UserID           uuid.UUID       `gorm:"type:uuid;not null;index" json:"user_id"`
+	CampaignID       uuid.UUID       `gorm:"type:uuid;not null;index" json:"campaign_id"`
+	Campaign         *Campaign       `json:"campaign,omitempty"`
+	MosqueID         uuid.UUID       `gorm:"type:uuid;not null;index" json:"mosque_id"`
+	Amount           decimal.Decimal `gorm:"type:numeric(15,2);not null" json:"amount"`
+	Currency         string          `gorm:"size:3;not null;default:TJS" json:"currency"`
+	PaymentMethod    string          `gorm:"size:20;not null" json:"payment_method"`
+	PaymentProvider  string          `gorm:"size:20;not null" json:"-"`
+	PaymentReference string          `gorm:"size:255;index" json:"-"`
+	Status           string          `gorm:"size:20;not null;default:pending;index" json:"status"`
+	SavobEarned      int             `gorm:"not null;default:0" json:"savob_earned"`
+}
+
+// ---------- Отчёты ----------
+
+const (
+	ReportStatusSubmitted = "submitted"
+	ReportStatusApproved  = "approved"
+	ReportStatusRejected  = "rejected"
+)
+
+type ExpenseItem struct {
+	Item string          `json:"item"`
+	Cost decimal.Decimal `json:"cost"`
+}
+
+// Report — отчёт мечети об использовании средств завершённой кампании.
+type Report struct {
+	Base
+	CampaignID     uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex" json:"campaign_id"`
+	Campaign       *Campaign       `json:"campaign,omitempty"`
+	MosqueID       uuid.UUID       `gorm:"type:uuid;not null;index" json:"mosque_id"`
+	Title          string          `gorm:"size:255;not null" json:"title"`
+	Description    string          `gorm:"type:text" json:"description"`
+	TotalCollected decimal.Decimal `gorm:"type:numeric(15,2);not null" json:"total_collected"`
+	TotalSpent     decimal.Decimal `gorm:"type:numeric(15,2);not null" json:"total_spent"`
+	Expenses       []ExpenseItem   `gorm:"serializer:json;type:text" json:"expenses"`
+	PhotoURLs      []string        `gorm:"serializer:json;type:text" json:"photo_urls"`
+	Status         string          `gorm:"size:20;not null;default:submitted;index" json:"status"`
+	ModerationNote string          `gorm:"type:text" json:"moderation_note,omitempty"`
+	SubmittedAt    time.Time       `json:"submitted_at"`
+}
+
+// ---------- Савоб ----------
+
+// SavobBalance — накопленные баллы пользователя.
+type SavobBalance struct {
+	UserID      uuid.UUID `gorm:"type:uuid;primaryKey" json:"user_id"`
+	TotalPoints int       `gorm:"not null;default:0" json:"total_points"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// SavobEntry — одно начисление баллов за пожертвование.
+type SavobEntry struct {
+	Base
+	UserID        uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	TransactionID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex" json:"transaction_id"`
+	Points        int       `gorm:"not null" json:"points"`
+	Multiplier    float64   `gorm:"not null;default:1" json:"multiplier"`
+	EventType     string    `gorm:"size:30;not null;default:regular" json:"event_type"`
+}
+
+// All — список моделей для AutoMigrate.
+func All() []any {
+	return []any{
+		&User{}, &Admin{}, &Mosque{}, &Campaign{}, &Transaction{},
+		&Report{}, &SavobBalance{}, &SavobEntry{},
+	}
 }

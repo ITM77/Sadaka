@@ -1,73 +1,90 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	// Server
 	Port string
 	Env  string
 
-	// Database
 	DatabaseURL string
+	JWTSecret   string
 
-	// JWT
-	JWTSecret string
+	// CORS: список разрешённых origin через запятую ("*" — любые, только для разработки).
+	CORSOrigins []string
 
-	// Redis
-	RedisURL string
+	// Платёжный провайдер: "mock" (разработка) — пока единственный.
+	// Alif / IMON подключаются отдельно.
+	PaymentProvider string
 
-	// Payment Gateway
-	PaymentGatewayKey    string
-	PaymentGatewaySecret string
+	// Савоб: множитель и тип события (regular, ramadan, kurban, special_event).
+	SavobMultiplier float64
+	SavobEvent      string
 
-	// Email
-	SMTPHost     string
-	SMTPPort     string
-	SMTPUser     string
-	SMTPPassword string
-
-	// URLs
-	MobileAppURL  string
-	AdminPanelURL string
+	// Первый суперадмин Комитета создаётся при старте, если админов ещё нет.
+	AdminBootstrapEmail    string
+	AdminBootstrapPassword string
+	AdminBootstrapName     string
 }
 
-var config *Config
+func (c *Config) IsProduction() bool { return c.Env == "production" }
 
-func Load() *Config {
-	// Загрузить .env файл (не критично если его нет)
+// Load читает конфигурацию из окружения (и .env, если он есть).
+func Load() (*Config, error) {
 	_ = godotenv.Load(".env")
 
-	return &Config{
-		Port:                 getEnv("PORT", "8080"),
-		Env:                  getEnv("ENV", "development"),
-		DatabaseURL:          getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/sadaka"),
-		JWTSecret:            getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-		RedisURL:             getEnv("REDIS_URL", "redis://localhost:6379"),
-		PaymentGatewayKey:    getEnv("PAYMENT_GATEWAY_KEY", ""),
-		PaymentGatewaySecret: getEnv("PAYMENT_GATEWAY_SECRET", ""),
-		SMTPHost:             getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:             getEnv("SMTP_PORT", "587"),
-		SMTPUser:             getEnv("SMTP_USER", ""),
-		SMTPPassword:         getEnv("SMTP_PASSWORD", ""),
-		MobileAppURL:         getEnv("MOBILE_APP_URL", "http://localhost:8081"),
-		AdminPanelURL:        getEnv("ADMIN_PANEL_URL", "http://localhost:3000"),
+	cfg := &Config{
+		Port:                   getEnv("PORT", "8080"),
+		Env:                    getEnv("ENV", "development"),
+		DatabaseURL:            getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/sadaka?sslmode=disable"),
+		JWTSecret:              os.Getenv("JWT_SECRET"),
+		PaymentProvider:        getEnv("PAYMENT_PROVIDER", "mock"),
+		SavobEvent:             getEnv("SAVOB_EVENT", "regular"),
+		AdminBootstrapEmail:    os.Getenv("ADMIN_BOOTSTRAP_EMAIL"),
+		AdminBootstrapPassword: os.Getenv("ADMIN_BOOTSTRAP_PASSWORD"),
+		AdminBootstrapName:     getEnv("ADMIN_BOOTSTRAP_NAME", "Администратор Комитета"),
 	}
+
+	for _, o := range strings.Split(getEnv("CORS_ORIGINS", "*"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			cfg.CORSOrigins = append(cfg.CORSOrigins, o)
+		}
+	}
+
+	mult, err := strconv.ParseFloat(getEnv("SAVOB_MULTIPLIER", "1"), 64)
+	if err != nil || mult < 1 || mult > 10 {
+		return nil, fmt.Errorf("SAVOB_MULTIPLIER должен быть числом от 1 до 10")
+	}
+	cfg.SavobMultiplier = mult
+
+	if cfg.JWTSecret == "" {
+		if cfg.IsProduction() {
+			return nil, fmt.Errorf("JWT_SECRET обязателен в production")
+		}
+		cfg.JWTSecret = "dev-only-insecure-secret"
+	}
+	if cfg.IsProduction() && len(cfg.JWTSecret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET должен быть не короче 32 символов")
+	}
+	if cfg.IsProduction() && cfg.PaymentProvider == "mock" {
+		return nil, fmt.Errorf("PAYMENT_PROVIDER=mock запрещён в production")
+	}
+	if cfg.IsProduction() && len(cfg.CORSOrigins) == 1 && cfg.CORSOrigins[0] == "*" {
+		return nil, fmt.Errorf("в production задайте CORS_ORIGINS явно")
+	}
+
+	return cfg, nil
 }
 
-func Get() *Config {
-	if config == nil {
-		config = Load()
+func getEnv(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
 	}
-	return config
-}
-
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
+	return def
 }
