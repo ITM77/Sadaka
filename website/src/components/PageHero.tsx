@@ -1,28 +1,30 @@
 import type { ReactNode } from 'react';
 
 interface PageHeroProps {
-  badge: string;
+  /** Надпись латунью над заголовком */
+  badge?: string;
   title: ReactNode;
   description?: ReactNode;
+  /** Кнопки, поиск или фильтры под описанием */
+  children?: ReactNode;
+  /** night — ночной фон с орнаментом (по умолчанию), light — светлый фон страницы */
+  tone?: 'night' | 'light';
 }
 
-/** Шапка внутренних страниц в стиле v2 (общая для about / contact / mosques). */
-export default function PageHero({ badge, title, description }: PageHeroProps) {
+/** Шапка внутренних страниц в стиле «Лазурит и латунь». */
+export default function PageHero({ badge, title, description, children, tone = 'night' }: PageHeroProps) {
+  const night = tone === 'night';
   return (
-    <section className="relative overflow-hidden bg-gradient-hero pt-32 pb-16 md:pt-40 md:pb-20">
-      <div className="absolute inset-0 -z-10" aria-hidden="true">
-        <div className="absolute -top-10 left-1/4 w-80 h-80 bg-primary-200 dark:bg-primary-900/20 rounded-full blur-3xl opacity-50" />
-        <div className="absolute top-10 right-1/4 w-72 h-72 bg-accent-200 dark:bg-accent-900/20 rounded-full blur-3xl opacity-40" />
-      </div>
-
-      <div className="container-custom text-center max-w-3xl animate-fade-in-up">
-        <span className="badge badge-primary mb-6">{badge}</span>
-        <h1 className="text-responsive-lg font-bold mb-6">{title}</h1>
+    <section className={night ? 'girih surface-night' : 'bg-paper'}>
+      <div className="container-custom pt-10 pb-12 md:pt-16 md:pb-20 flex flex-col gap-4 md:gap-5 max-w-[1200px]">
+        {badge && <p className={`eyebrow ${night ? 'text-gold' : ''}`}>{badge}</p>}
+        <h1 className="h-page max-w-[820px]">{title}</h1>
         {description && (
-          <p className="text-lg md:text-xl text-dark-600 dark:text-dark-300 leading-relaxed">
+          <p className={`text-[17px] md:text-xl leading-relaxed max-w-[680px] ${night ? 'text-mist' : 'text-muted'}`}>
             {description}
           </p>
         )}
+        {children && <div className="mt-2 md:mt-3">{children}</div>}
       </div>
     </section>
   );

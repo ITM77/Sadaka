@@ -1,61 +1,68 @@
 import { Metadata } from 'next';
-import PageHero from '@/components/PageHero';
 import ContactForm from '@/components/ContactForm';
+import { IconClock, IconMail, IconPin } from '@/components/icons';
 
 export const metadata: Metadata = {
   title: 'Контакты — Садака',
-  description: 'Свяжитесь с командой Садака.',
+  description: 'Свяжитесь с командой Садака: вопросы о пожертвованиях, подключении мечети и отчётах.',
 };
-
-const contacts = [
-  { icon: '📍', title: 'Адрес', lines: ['Душанбе, Таджикистан', 'Офис Садака'] },
-  { icon: '📧', title: 'Email', lines: ['info@sadaka.tj', 'support@sadaka.tj'] },
-  { icon: '📱', title: 'Телефон', lines: ['+992 371 123 456', '+992 901 234 567'] },
-  { icon: '🕐', title: 'Время работы', lines: ['Пн-Пт: 9:00 - 18:00', 'Сб-Вс: Закрыто'] },
-];
 
 export default function Contact() {
   return (
-    <>
-      <PageHero
-        badge="✉️ Контакты"
-        title={
-          <>
-            Свяжитесь <span className="text-gradient">с нами</span>
-          </>
-        }
-        description="Есть вопрос, предложение или хотите подключить мечеть? Напишите нам — ответим в рабочее время."
-      />
-
-      <section className="section pt-0 md:pt-0">
-        <div className="container-custom max-w-5xl">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {contacts.map((c) => (
-              <div key={c.title} className="card-hover p-6 group">
-                <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-2xl mb-4 transition-transform duration-300 group-hover:scale-110">
-                  {c.icon}
-                </div>
-                <h2 className="text-lg font-bold mb-2">{c.title}</h2>
-                <p className="text-dark-600 dark:text-dark-400 text-sm leading-relaxed">
-                  {c.lines.map((line, i) => (
-                    <span key={i} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="card p-8 md:p-10 max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Отправьте сообщение</h2>
-            <p className="text-dark-600 dark:text-dark-400 mb-8">
-              Заполните форму — откроется ваш почтовый клиент с готовым письмом.
-            </p>
-            <ContactForm />
-          </div>
+    <div className="container-custom pt-10 pb-16 md:pt-[72px] md:pb-24 flex flex-col lg:flex-row lg:items-start gap-8 lg:gap-10">
+      <section className="lg:flex-1 min-w-0 flex flex-col gap-6 md:gap-7">
+        <div className="flex flex-col gap-3 md:gap-3.5">
+          <p className="eyebrow">Контакты</p>
+          <h1 className="h-page">Мы на связи</h1>
+          <p className="text-[17px] md:text-lg leading-relaxed text-muted">
+            Вопрос о пожертвовании, подключении мечети или отчёте — ответим в рабочее время.
+          </p>
         </div>
+        <ul className="flex flex-col gap-3">
+          <li className="flex items-center gap-4 bg-white border border-line rounded-2xl px-5 py-[18px]">
+            <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-mint text-primary-600 flex items-center justify-center shrink-0">
+              <IconMail size={22} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm text-muted">Почта</p>
+              <a href="mailto:info@sadaka.tj" className="text-[17px] font-semibold text-primary-600 hover:text-primary-700 break-all">
+                info@sadaka.tj
+              </a>
+            </div>
+          </li>
+          <li className="flex items-center gap-4 bg-white border border-line rounded-2xl px-5 py-[18px]">
+            <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-mint text-primary-600 flex items-center justify-center shrink-0">
+              <IconPin size={22} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm text-muted">Офис</p>
+              <p className="text-[17px] font-semibold">Душанбе, Таджикистан</p>
+            </div>
+          </li>
+          <li className="flex items-center gap-4 bg-white border border-line rounded-2xl px-5 py-[18px]">
+            <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-mint text-primary-600 flex items-center justify-center shrink-0">
+              <IconClock size={22} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm text-muted">Часы работы</p>
+              <p className="text-[17px] font-semibold">Пн–Пт, 9:00–18:00</p>
+            </div>
+          </li>
+        </ul>
       </section>
-    </>
+
+      <section
+        aria-labelledby="contact-form-title"
+        className="lg:flex-[1.25] min-w-0 bg-white border border-line rounded-[20px] md:rounded-panel p-5 sm:p-8 md:p-10"
+      >
+        <h2 id="contact-form-title" className="text-2xl md:text-[26px] font-bold mb-2">
+          Написать нам
+        </h2>
+        <p className="text-[15px] text-muted mb-6">
+          Форма откроет ваш почтовый клиент с готовым письмом на info@sadaka.tj.
+        </p>
+        <ContactForm />
+      </section>
+    </div>
   );
 }

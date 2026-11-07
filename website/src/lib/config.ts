@@ -2,8 +2,7 @@ export const SITE_CONFIG = {
   name: 'Садака',
   description: 'Цифровая платформа для прозрачных и доверенных пожертвований в мечетях Таджикистана',
   url: process.env.NEXT_PUBLIC_SITE_URL || 'https://sadaka.tj',
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
-  
+
   // Social links
   social: {
     facebook: 'https://facebook.com/sadaka',

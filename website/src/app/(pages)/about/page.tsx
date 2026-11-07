@@ -1,109 +1,126 @@
 import { Metadata } from 'next';
-import PageHero from '@/components/PageHero';
+import { IconMosque, IconSavob, IconShield } from '@/components/icons';
 
 export const metadata: Metadata = {
-  title: 'О Садака — Миссия и ценности',
-  description: 'Узнайте о проекте Садака, его миссии и как он работает для сообществ.',
+  title: 'О проекте — Садака',
+  description:
+    'Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана показать, на что потрачены деньги.',
 };
 
-const values = [
-  { icon: '🤝', title: 'Прозрачность', text: 'Каждый видит, куда идут деньги' },
-  { icon: '🛡️', title: 'Доверие', text: 'Одобрение Комитетом улемов Таджикистана' },
-  { icon: '📱', title: 'Цифровой формат', text: 'Доступно молодёжи, которая не носит наличные' },
-  { icon: '⭐', title: 'Система Савоб', text: 'Духовная награда за добрые дела' },
-  { icon: '📊', title: 'Обязательная отчётность', text: 'Мечети обязаны отчитываться о расходах' },
+const before = [
+  'Пожертвования наличными без учёта',
+  'Мечети не отчитывались о расходах',
+  'Нет единого стандарта по стране',
+  'Молодёжь не носит наличные',
 ];
 
-const steps = [
-  'Скачайте приложение',
-  'Выберите мечеть или кампанию',
-  'Пожертвуйте удобным способом',
-  'Получите подтверждение и Савоб',
+const after = [
+  'Онлайн-пожертвования картой и кошельком',
+  'Обязательный отчёт по каждому сбору',
+  'Одобрение Комитетом улемов',
+  'Савоб — история ваших добрых дел',
+];
+
+const roles = [
+  {
+    icon: <IconShield size={26} />,
+    tile: 'bg-mint text-primary-600',
+    title: 'Комитет улемов',
+    text: 'Одобряет мечети и сборы, проверяет отчёты, видит статистику по стране и блокирует нарушителей.',
+  },
+  {
+    icon: <IconMosque size={26} strokeWidth={1.6} />,
+    tile: 'bg-[#E4ECF1] text-[#1B4D63]',
+    title: 'Мечеть',
+    text: 'Открывает сборы с целью и сроком, ведёт QR-код для прихожан и публикует отчёт после каждого сбора.',
+  },
+  {
+    icon: <IconSavob size={26} />,
+    tile: 'bg-sand text-brass-700',
+    title: 'Жертвователь',
+    text: 'Выбирает мечеть или сбор, жертвует онлайн, получает Савоб и видит отчёт о расходах.',
+  },
 ];
 
 const partners = [
-  'Комитет улемов Таджикистана',
-  'Национальный банк Таджикистана',
-  'Платёжные системы (Alif, IMON)',
-  'Мечети по всей стране',
+  { name: 'Комитет улемов', role: 'Регулятор и модератор сборов' },
+  { name: 'Национальный банк', role: 'Лицензирование платежей' },
+  { name: 'Alif и IMON', role: 'Платёжная инфраструктура' },
+  { name: 'Мечети страны', role: 'Операторы сборов' },
 ];
 
 export default function About() {
   return (
     <>
-      <PageHero
-        badge="🕌 О проекте"
-        title={
-          <>
-            О <span className="text-gradient">Садака</span>
-          </>
-        }
-        description="Цифровая платформа, которая решает ключевую проблему в Таджикистане: отсутствие прозрачности в сборе пожертвований и недоверие жертвователей."
-      />
+      <section className="container-custom pt-10 pb-8 md:pt-[72px] md:pb-12 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-12">
+        <div className="lg:flex-[1.5] min-w-0 flex flex-col gap-3 md:gap-4">
+          <p className="eyebrow">
+            О проекте · <span lang="ar">صدقة</span>
+          </p>
+          <h1 className="text-[34px] leading-[1.1] sm:text-5xl lg:text-[56px] lg:leading-[1.05] font-bold" style={{ letterSpacing: '-0.025em' }}>
+            Традиция садақа — в цифровом формате
+          </h1>
+        </div>
+        <p className="lg:flex-1 min-w-0 text-[17px] md:text-lg leading-[1.7] text-dark-700">
+          Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана
+          показать, на что потрачены деньги.
+        </p>
+      </section>
 
-      {/* Почему Садака */}
-      <section className="section">
-        <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="text-responsive mb-4">Почему Садака?</h2>
-            <p className="text-lg text-dark-600 dark:text-dark-400 max-w-2xl mx-auto">
-              Пять принципов, на которых построена платформа
+      <section className="container-custom py-4 md:py-6">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+          <div className="card p-6 md:p-7">
+            <h2 className="text-xl font-bold mb-4">Что мешало раньше</h2>
+            <ul className="list-disc pl-5 flex flex-col gap-2.5 text-base leading-normal text-dark-700 marker:text-dark-400">
+              {before.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="surface-lazurite rounded-card p-6 md:p-7">
+            <h2 className="text-xl font-bold mb-4">Что меняет Садака</h2>
+            <ul className="list-disc pl-5 flex flex-col gap-2.5 text-base leading-normal text-[#D4E3DF] marker:text-gold">
+              {after.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="container-custom py-10 md:py-12">
+        <h2 className="text-[26px] leading-tight md:text-[36px] font-bold mb-5 md:mb-6" style={{ letterSpacing: '-0.02em' }}>
+          Три участника — одна система доверия
+        </h2>
+        <div className="grid md:grid-cols-3 gap-4 md:gap-5">
+          {roles.map((r) => (
+            <article key={r.title} className="card p-6 md:p-7 flex flex-col gap-3">
+              <span aria-hidden="true" className={`icon-tile ${r.tile}`}>
+                {r.icon}
+              </span>
+              <h3 className="text-xl font-bold">{r.title}</h3>
+              <p className="text-base leading-relaxed text-muted">{r.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="container-custom pt-4 pb-16 md:pt-6 md:pb-24">
+        <div className="bg-white border border-line rounded-[20px] md:rounded-[24px] p-6 md:p-10 flex flex-col lg:flex-row gap-6 lg:gap-10">
+          <div className="lg:flex-1 min-w-0">
+            <h2 className="text-2xl md:text-[28px] font-bold mb-3">Партнёры</h2>
+            <p className="text-base leading-relaxed text-muted">
+              Платформа работает вместе с государственными и платёжными институтами страны.
             </p>
           </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {values.map((v) => (
-              <div key={v.title} className="card-hover p-8 group">
-                <div className="text-4xl mb-4 transition-transform duration-300 group-hover:scale-110">
-                  {v.icon}
-                </div>
-                <h3 className="text-xl font-bold mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                  {v.title}
-                </h3>
-                <p className="text-dark-600 dark:text-dark-400 leading-relaxed">{v.text}</p>
+          <dl className="lg:flex-[2] min-w-0 grid sm:grid-cols-2 gap-3 md:gap-4">
+            {partners.map((p) => (
+              <div key={p.name} className="p-[18px] rounded-2xl bg-paper">
+                <dt className="text-base font-bold">{p.name}</dt>
+                <dd className="mt-1 text-sm text-muted">{p.role}</dd>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Как это работает */}
-      <section className="section bg-gradient-to-b from-dark-50 to-white dark:from-dark-800 dark:to-dark-900">
-        <div className="container-custom max-w-4xl">
-          <div className="text-center mb-12">
-            <h2 className="text-responsive mb-4">Как это работает?</h2>
-          </div>
-
-          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {steps.map((step, i) => (
-              <li key={step} className="card p-6 pt-10 text-center">
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                  {i + 1}
-                </span>
-                <p className="font-medium">{step}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Партнёры */}
-      <section className="section">
-        <div className="container-custom max-w-4xl">
-          <div className="text-center mb-12">
-            <h2 className="text-responsive mb-4">Ключевые партнёры</h2>
-          </div>
-
-          <ul className="grid sm:grid-cols-2 gap-4">
-            {partners.map((p) => (
-              <li key={p} className="card flex items-center gap-4 p-5">
-                <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold">
-                  ✓
-                </span>
-                <span className="font-medium">{p}</span>
-              </li>
-            ))}
-          </ul>
+          </dl>
         </div>
       </section>
     </>

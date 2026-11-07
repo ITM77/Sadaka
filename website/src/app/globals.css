@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ===========================================================
-   Base
+   «Лазурит и латунь» — базовые стили
    =========================================================== */
 @layer base {
   * {
@@ -16,205 +16,345 @@
   }
 
   body {
-    @apply bg-white text-dark-900 font-sans antialiased;
-  }
-
-  .dark body {
-    @apply bg-dark-900 text-dark-50;
+    @apply bg-paper text-ink font-sans antialiased;
   }
 
   h1,
   h2,
   h3,
   h4 {
-    @apply font-display tracking-tight;
+    @apply font-display;
+    letter-spacing: -0.015em;
   }
 
   ::selection {
-    @apply bg-primary-200 text-primary-900;
+    @apply bg-brass-200 text-night;
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    @apply w-2 h-2;
+  :focus-visible {
+    outline: 2px solid #0f5c55;
+    outline-offset: 2px;
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-dark-100 dark:bg-dark-800;
+  /* fieldset по умолчанию не сжимается уже своего содержимого — на телефоне это ломает формы */
+  fieldset {
+    min-width: 0;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-primary-600 rounded-full hover:bg-primary-700;
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
   }
 }
 
 /* ===========================================================
-   Components
+   Компоненты
    =========================================================== */
 @layer components {
-  /* --- Layout --- */
+  /* --- Сетка --- */
   .container-custom {
-    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply w-full max-w-[1200px] mx-auto px-4 sm:px-8;
   }
 
   .section {
-    @apply py-16 md:py-24;
+    @apply py-14 md:py-24;
   }
 
   .section-sm {
-    @apply py-10 md:py-16;
+    @apply py-10 md:py-14;
   }
 
-  /* --- Glass --- */
-  .glass {
-    @apply bg-white/80 dark:bg-dark-900/80 backdrop-blur-xl;
+  /* --- Типографика --- */
+  .eyebrow {
+    @apply text-[13px] sm:text-[15px] font-semibold uppercase text-brass-600;
+    letter-spacing: 0.04em;
   }
 
-  .glass-sm {
-    @apply bg-white/10 dark:bg-dark-900/30 backdrop-blur-lg rounded-2xl border border-white/20;
+  .h-display {
+    @apply text-[38px] leading-[1.08] sm:text-5xl lg:text-[64px] lg:leading-[1.05] font-bold;
+    letter-spacing: -0.02em;
   }
 
-  /* --- Buttons --- */
+  .h-section {
+    @apply text-[28px] leading-[1.15] md:text-[40px] font-bold;
+    letter-spacing: -0.02em;
+  }
+
+  .h-page {
+    @apply text-[32px] leading-[1.1] md:text-[48px] font-bold;
+    letter-spacing: -0.02em;
+  }
+
+  /* --- Кнопки --- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold
-      transition-all duration-200 select-none
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-      dark:focus-visible:ring-offset-dark-900
-      disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-[15px] font-semibold
+      transition-colors duration-150 select-none whitespace-nowrap
+      disabled:opacity-60 disabled:pointer-events-none;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm
-      hover:from-primary-600 hover:to-primary-700 hover:shadow-glow;
+    @apply bg-primary-600 text-white hover:bg-primary-700 hover:text-white;
   }
 
   .btn-secondary {
-    @apply bg-dark-100 text-dark-800 hover:bg-dark-200
-      dark:bg-dark-700 dark:text-dark-50 dark:hover:bg-dark-600;
+    @apply bg-white text-ink border border-line hover:bg-paper hover:border-dark-300;
   }
 
   .btn-ghost {
-    @apply bg-transparent text-dark-700 hover:bg-primary-50 hover:text-primary-700
-      dark:text-dark-200 dark:hover:bg-dark-700 dark:hover:text-white;
+    @apply bg-transparent text-ink hover:bg-mint hover:text-primary-700;
   }
 
   .btn-outline {
-    @apply border-2 border-primary-500 text-primary-600 bg-transparent
-      hover:bg-primary-50
-      dark:text-primary-400 dark:border-primary-400 dark:hover:bg-primary-900/30;
+    @apply border border-primary-600 text-primary-600 bg-transparent hover:bg-mint;
+  }
+
+  .btn-gold {
+    @apply bg-gold text-night hover:bg-brass-300;
+  }
+
+  /* Контурная кнопка на тёмном (ночном / лазуритовом) фоне */
+  .btn-on-dark {
+    @apply border border-paper/35 text-paper bg-transparent hover:bg-paper/10 hover:text-paper;
+  }
+
+  .btn-danger {
+    @apply bg-white text-red-700 border border-red-200 hover:bg-red-50;
   }
 
   .btn-sm {
-    @apply px-4 py-2 text-sm rounded-lg;
+    @apply h-10 px-4 text-sm rounded-[10px];
   }
 
   .btn-lg {
-    @apply px-8 py-4 text-lg;
+    @apply h-14 px-7 text-[17px] rounded-[14px];
   }
 
-  /* --- Cards --- */
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* --- Карточки --- */
   .card {
-    @apply relative bg-white dark:bg-dark-800 rounded-2xl border border-dark-100 dark:border-dark-700 shadow-sm;
+    @apply relative bg-white rounded-card border border-line;
   }
 
   .card-hover {
-    @apply card transition-all duration-300
-      hover:-translate-y-1 hover:shadow-lg hover:border-primary-200
-      dark:hover:border-primary-800;
+    @apply card transition-[border-color,box-shadow,transform] duration-200
+      hover:border-primary-200 hover:shadow-md hover:-translate-y-0.5;
   }
 
   .card-interactive {
-    @apply card-hover cursor-pointer active:scale-[0.98];
+    @apply card-hover cursor-pointer;
   }
 
-  /* --- Badges --- */
+  .panel {
+    @apply relative overflow-hidden rounded-[20px] md:rounded-panel px-5 py-8 sm:px-8 md:px-12 md:py-14;
+  }
+
+  /* --- Метки --- */
   .badge {
-    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium
-      bg-dark-100 text-dark-700 dark:bg-dark-800 dark:text-dark-200;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-semibold
+      bg-paper text-muted whitespace-nowrap;
   }
 
   .badge-primary {
-    @apply bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300;
+    @apply bg-mint text-primary-700;
+  }
+
+  .badge-brass {
+    @apply bg-sand text-brass-700;
   }
 
   .badge-success {
-    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300;
+    @apply bg-mint text-primary-700;
   }
 
-  /* --- Forms --- */
+  .badge-warning {
+    @apply bg-sand text-brass-800;
+  }
+
+  .badge-danger {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .badge-neutral {
+    @apply bg-paper text-muted border border-line;
+  }
+
+  /* Иконка в плашке */
+  .icon-tile {
+    @apply w-[52px] h-[52px] rounded-[14px] bg-mint text-primary-600 flex items-center justify-center shrink-0;
+  }
+
+  /* Номер шага в латунном кольце */
+  .step-num {
+    @apply w-11 h-11 rounded-full border-[1.5px] border-brass-400 text-brass-600 flex items-center justify-center
+      text-lg font-bold shrink-0;
+  }
+
+  /* --- Формы --- */
   .label {
-    @apply block text-sm font-semibold text-dark-700 dark:text-dark-200 mb-2;
+    @apply block text-sm font-semibold text-ink mb-2;
   }
 
   .input {
-    @apply block w-full px-4 py-3 rounded-xl border border-dark-200 bg-white text-dark-900
-      placeholder:text-dark-400 shadow-xs transition-colors
-      focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 focus:outline-none
-      dark:bg-dark-900 dark:border-dark-700 dark:text-dark-50 dark:placeholder:text-dark-500;
+    @apply block w-full h-12 px-4 rounded-xl border border-line bg-white text-ink text-base
+      placeholder:text-dark-400 transition-colors
+      focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15 focus:outline-none;
   }
 
-  /* --- Text --- */
+  textarea.input {
+    @apply h-auto py-3 leading-relaxed;
+  }
+
+  select.input {
+    @apply pr-10;
+  }
+
+  .hint {
+    @apply mt-1.5 text-sm text-muted;
+  }
+
+  .alert {
+    @apply rounded-xl px-4 py-3 text-[15px] leading-relaxed;
+  }
+
+  .alert-error {
+    @apply alert bg-red-50 text-red-800 border border-red-200;
+  }
+
+  .alert-success {
+    @apply alert bg-mint text-primary-800 border border-primary-200;
+  }
+
+  .alert-info {
+    @apply alert bg-sand text-brass-800 border border-brass-200;
+  }
+
+  /* Сегментированный переключатель (вкладки, язык) */
+  .segmented {
+    @apply inline-flex p-1 rounded-xl bg-paper border border-line;
+  }
+
+  .segmented > * {
+    @apply h-10 px-4 rounded-[9px] text-[15px] font-semibold text-muted inline-flex items-center justify-center
+      transition-colors;
+  }
+
+  .segmented > [aria-selected='true'],
+  .segmented > [aria-pressed='true'],
+  .segmented > [aria-current='page'] {
+    @apply bg-white text-ink shadow-xs;
+  }
+
+  /* Чип фильтра */
+  .chip {
+    @apply inline-flex items-center h-10 px-4 rounded-full border border-line bg-white text-[15px] font-medium
+      text-dark-700 whitespace-nowrap transition-colors hover:border-primary-300;
+  }
+
+  .chip[aria-pressed='true'],
+  .chip[aria-current='page'] {
+    @apply bg-primary-600 border-primary-600 text-white;
+  }
+
+  /* --- Прогресс --- */
+  .progress-track {
+    @apply w-full rounded-full bg-track overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-primary-600 transition-[width] duration-700;
+  }
+
+  /* --- Орнамент «гирих» (восьмиконечная звезда), рисуется ::before поверх фона --- */
+  .girih {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .girih::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' fill='none' stroke='%23C9A25A' stroke-width='1'%3E%3Cpath d='M32 12 52 32 32 52 12 32Z'/%3E%3Crect x='17.9' y='17.9' width='28.2' height='28.2'/%3E%3Ccircle cx='32' cy='32' r='4'/%3E%3C/svg%3E");
+    background-size: 64px 64px;
+    opacity: var(--girih-opacity, 0.14);
+  }
+
+  .girih-brass::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' fill='none' stroke='%239A6B1F' stroke-width='1'%3E%3Cpath d='M32 12 52 32 32 52 12 32Z'/%3E%3Crect x='17.9' y='17.9' width='28.2' height='28.2'/%3E%3C/svg%3E");
+    --girih-opacity: 0.1;
+  }
+
+  .girih-faint {
+    --girih-opacity: 0.07;
+  }
+
+  .girih-strong {
+    --girih-opacity: 0.35;
+  }
+
+  /* Тёмные поверхности */
+  .surface-night {
+    @apply bg-night text-paper;
+  }
+
+  .surface-lazurite {
+    @apply bg-primary-600 text-paper;
+  }
+
+  .surface-sand {
+    @apply bg-sand text-brass-900;
+  }
+
+  /* --- Совместимость со старыми классами --- */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-emerald-400 bg-clip-text text-transparent;
+    @apply text-primary-600;
   }
 
   .text-gradient-light {
-    @apply bg-gradient-to-r from-primary-300 to-emerald-200 bg-clip-text text-transparent;
+    @apply text-gold;
   }
 
   .text-responsive {
-    @apply text-3xl md:text-4xl lg:text-5xl font-display font-bold;
+    @apply h-section;
   }
 
   .text-responsive-lg {
-    @apply text-4xl md:text-5xl lg:text-6xl leading-tight;
+    @apply h-page;
   }
 
-  /* --- Gradient backgrounds --- */
-  .bg-gradient-primary {
-    @apply bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900;
-  }
-
+  .bg-gradient-primary,
   .bg-gradient-accent {
-    @apply bg-gradient-to-br from-primary-600 via-emerald-600 to-teal-700;
+    @apply bg-primary-600;
   }
 
   .bg-gradient-hero {
-    @apply bg-gradient-to-b from-primary-50/60 via-white to-white
-      dark:from-dark-900 dark:via-dark-900 dark:to-dark-900;
+    @apply bg-paper;
   }
 
-  /* --- Scroll reveal (Intersection Observer adds .visible) --- */
+  .glass {
+    @apply bg-white/90 backdrop-blur-md;
+  }
+
+  /* --- Появление при прокрутке --- */
   .animate-on-scroll {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(16px);
     transition:
-      opacity 0.7s ease-out,
-      transform 0.7s ease-out;
+      opacity 0.6s ease-out,
+      transform 0.6s ease-out;
   }
 
   .animate-on-scroll.visible {
     opacity: 1;
     transform: none;
   }
-}
-
-/* ===========================================================
-   Utilities
-   =========================================================== */
-@keyframes gradient {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.bg-gradient-animate {
-  background-size: 200% 200%;
-  animation: gradient 3s ease infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -233,5 +373,6 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

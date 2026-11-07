@@ -1,121 +1,138 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth';
+import { initials } from '@/lib/api';
+import Logo from './Logo';
+import { IconChevronRight, IconClose, IconMenu } from './icons';
+
+const NAV = [
+  { href: '/', label: 'Главная' },
+  { href: '/campaigns', label: 'Сборы' },
+  { href: '/mosques', label: 'Мечети' },
+  { href: '/about', label: 'О проекте' },
+  { href: '/contact', label: 'Контакты' },
+];
+
+function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+}
 
 export default function Header() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname() ?? '/';
+  const { user, ready } = useAuth();
+  const [open, setOpen] = useState(false);
+  const signedIn = ready && !!user;
 
+  // Закрываем меню при переходе и по Escape
+  useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
-    setMounted(true);
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'glass shadow-lg'
-          : 'bg-transparent'
-      }`}
-    >
-      <nav className="container-custom py-4 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="text-3xl transform group-hover:scale-110 transition-transform">
-            🕌
-          </div>
-          <span className="text-2xl font-display font-bold text-gradient hidden sm:inline">
-            Садака
-          </span>
-        </Link>
-
-        {/* Desktop Menu */}
-        <div className="hidden lg:flex items-center gap-1">
-          {[
-            { href: '/', label: 'Главная' },
-            { href: '/about', label: 'О проекте' },
-            { href: '/mosques', label: 'Мечети' },
-            { href: '/contact', label: 'Контакты' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="px-4 py-2 rounded-lg hover:bg-primary-50 dark:hover:bg-dark-700 transition-colors font-medium"
-            >
-              {item.label}
-            </Link>
-          ))}
+    <header className="sticky top-0 z-50 bg-white border-b border-line">
+      <div className="container-custom flex items-center gap-2 md:gap-8 min-h-16 md:min-h-20 pr-3 sm:pr-8">
+        <div className="mr-auto">
+          <Logo />
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-3">
-          {/* Theme toggle */}
-          {mounted && (
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
-              aria-label="Toggle theme"
+        <nav aria-label="Основное меню" className="hidden lg:flex items-center gap-1 flex-1">
+          {NAV.map((n) => {
+            const active = isActive(pathname, n.href);
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={active ? 'page' : undefined}
+                className={`inline-flex items-center h-11 px-3.5 rounded-[10px] text-[15px] transition-colors ${
+                  active
+                    ? 'bg-mint text-primary-700 font-semibold'
+                    : 'text-dark-700 font-medium hover:bg-paper hover:text-ink'
+                }`}
+              >
+                {n.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-2.5">
+          {signedIn ? (
+            <Link
+              href="/profile"
+              className="hidden lg:inline-flex items-center gap-2.5 h-11 pl-1.5 pr-3.5 rounded-xl border border-line text-[15px] font-semibold text-ink hover:border-dark-300"
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+              <span
+                aria-hidden="true"
+                className="w-8 h-8 rounded-full bg-sand text-brass-700 flex items-center justify-center text-[13px] font-bold"
+              >
+                {initials(user!.full_name)}
+              </span>
+              Профиль
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden lg:inline-flex items-center h-11 px-4 rounded-xl text-[15px] font-semibold text-ink hover:bg-paper"
+            >
+              Войти
+            </Link>
           )}
-
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-2">
-            <button className="btn btn-ghost btn-sm">Вход</button>
-            <button className="btn btn-primary btn-sm">Приложение</button>
-          </div>
-
-          {/* Mobile Menu Button */}
+          <Link href="/campaigns" className="btn h-10 px-3.5 text-sm md:h-11 md:px-[18px] md:text-[15px] btn-primary">
+            Пожертвовать
+          </Link>
           <button
-            className="lg:hidden p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
+            type="button"
+            className="lg:hidden w-11 h-11 rounded-xl bg-paper text-ink flex items-center justify-center"
+            aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={open}
+            aria-controls="site-drawer"
+            onClick={() => setOpen((v) => !v)}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d={isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
-              />
-            </svg>
+            {open ? <IconClose size={22} /> : <IconMenu size={22} />}
           </button>
         </div>
-      </nav>
+      </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="lg:hidden glass border-t border-white/20 dark:border-dark-700/50 animate-fade-in-down">
-          <div className="container-custom py-4 space-y-2">
-            {[
-              { href: '/', label: 'Главная' },
-              { href: '/about', label: 'О проекте' },
-              { href: '/mosques', label: 'Мечети' },
-              { href: '/contact', label: 'Контакты' },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block px-4 py-3 rounded-lg hover:bg-primary-50 dark:hover:bg-dark-700 transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="flex gap-2 pt-2">
-              <button className="btn btn-secondary btn-sm flex-1">Вход</button>
-              <button className="btn btn-primary btn-sm flex-1">Приложение</button>
-            </div>
+      {open && (
+        <div id="site-drawer" className="lg:hidden girih surface-night px-4 pt-5 pb-6 animate-fade-in-down" style={{ ['--girih-opacity' as string]: 0.12 }}>
+          <nav aria-label="Меню" className="flex flex-col">
+            {NAV.map((n) => {
+              const active = isActive(pathname, n.href);
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center justify-between min-h-14 border-b border-paper/10 text-xl ${
+                    active ? 'text-gold font-bold' : 'text-paper font-medium'
+                  }`}
+                >
+                  <span>{n.label}</span>
+                  <IconChevronRight size={18} />
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="flex gap-2.5 mt-5">
+            <Link
+              href={signedIn ? '/profile' : '/login'}
+              className="flex-1 flex items-center justify-center h-12 rounded-xl border border-paper/30 text-paper text-[15px] font-semibold"
+            >
+              {signedIn ? 'Мой профиль' : 'Войти'}
+            </Link>
+            <Link
+              href="/cabinet"
+              className="flex-1 flex items-center justify-center h-12 rounded-xl bg-paper/10 text-paper text-[15px] font-semibold"
+            >
+              Кабинет мечети
+            </Link>
           </div>
         </div>
       )}
