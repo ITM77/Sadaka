@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import CampaignCard from '@/components/CampaignCard';
 import EmptyState from '@/components/EmptyState';
-import CatalogCard from '@/components/donor/CatalogCard';
 import { IconSearch } from '@/components/icons';
 import { apiFetch, Campaign, CATEGORY_LABELS, plural, progress } from '@/lib/api';
 
@@ -63,110 +63,100 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
   };
 
   return (
-    <>
-      <section className="container-custom pt-7 md:pt-16 pb-6 flex flex-col gap-[18px] md:gap-7">
-        <div className="flex flex-col gap-3 max-w-[720px]">
-          <p className="eyebrow">Сборы</p>
-          <h1 className="text-[30px] leading-[1.1] md:text-5xl font-bold tracking-[-0.02em]">
-            Каждый сбор одобрен Комитетом улемов
-          </h1>
-          <p className="text-base md:text-lg leading-relaxed text-muted">
-            После завершения мечеть публикует отчёт — на что ушёл каждый сомони.
-          </p>
-        </div>
+    <div className="page flex flex-col gap-3">
+      <header className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between md:gap-4 pt-1 md:pt-0">
+        <h1 className="title">Сборы</h1>
+        <p className="body-text">Каждый сбор одобрен Комитетом улемов. После завершения — отчёт мечети.</p>
+      </header>
 
-        <form
-          role="search"
-          action="/campaigns"
-          className="flex flex-wrap gap-2 md:gap-3 bg-white border border-line rounded-2xl md:rounded-[18px] p-2 md:p-3"
-        >
-          {category && <input type="hidden" name="category" value={category} />}
-          <label className="basis-full md:flex-[1_1_320px] min-w-0 flex items-center gap-2.5 h-[52px] px-4 rounded-xl bg-paper focus-within:ring-2 focus-within:ring-primary-600">
-            <IconSearch size={20} className="text-muted shrink-0" />
-            <span className="sr-only">Поиск сбора</span>
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Название сбора или мечети"
-              className="flex-1 min-w-0 border-0 bg-transparent p-0 text-base text-ink placeholder:text-dark-400 focus:ring-0 focus:outline-none"
-            />
-          </label>
-          <label className="flex-[1_1_40%] md:flex-[0_1_220px] min-w-0">
-            <span className="sr-only">Город</span>
-            <select name="city" defaultValue={city} className="input h-[52px]">
-              <option value="">Все города</option>
-              {cities.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex-[1_1_40%] md:flex-[0_1_220px] min-w-0">
-            <span className="sr-only">Сортировка</span>
-            <select name="sort" defaultValue={sort} className="input h-[52px]">
-              {Object.entries(SORTS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="btn btn-primary h-[52px] px-6 text-base basis-full md:basis-auto">
-            Найти
-          </button>
-        </form>
+      <form role="search" action="/campaigns" className="panel flex flex-wrap gap-2">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label className="relative basis-full md:basis-auto md:flex-[1_1_280px] min-w-0">
+          <span className="sr-only">Поиск сбора</span>
+          <IconSearch
+            size={18}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+          />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Название сбора или мечети"
+            className="input pl-10"
+          />
+        </label>
+        <label className="flex-[1_1_40%] md:flex-[0_1_200px] min-w-0">
+          <span className="sr-only">Город</span>
+          <select name="city" defaultValue={city} className="input">
+            <option value="">Все города</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex-[1_1_40%] md:flex-[0_1_200px] min-w-0">
+          <span className="sr-only">Сортировка</span>
+          <select name="sort" defaultValue={sort} className="input">
+            {Object.entries(SORTS).map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="btn btn-primary basis-full md:basis-auto">
+          Найти
+        </button>
+      </form>
 
-        <nav
-          aria-label="Категории"
-          className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto md:overflow-visible -mx-4 px-4 pb-1 sm:-mx-8 sm:px-8 md:mx-0 md:px-0 md:pb-0 [scrollbar-width:none]"
-        >
-          <CategoryLink href={hrefFor('')} active={!category}>
-            Все
+      <nav
+        aria-label="Категории"
+        className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none]"
+      >
+        <CategoryLink href={hrefFor('')} active={!category}>
+          Все
+        </CategoryLink>
+        {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
+          <CategoryLink key={id} href={hrefFor(id)} active={category === id}>
+            {label}
           </CategoryLink>
-          {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
-            <CategoryLink key={id} href={hrefFor(id)} active={category === id}>
-              {label}
-            </CategoryLink>
-          ))}
-        </nav>
-      </section>
+        ))}
+      </nav>
 
-      <section className="container-custom pt-2 pb-16 md:pb-24">
-        {campaigns.length === 0 ? (
-          <EmptyState
-            icon={<IconSearch size={26} />}
-            title={filtered ? 'Ничего не найдено' : 'Сейчас нет активных кампаний'}
-          >
-            {filtered ? (
-              <Link href={category ? `/campaigns?category=${category}` : '/campaigns'} className="font-semibold">
-                Сбросить поиск
-              </Link>
-            ) : (
-              'Новые сборы появятся после одобрения Комитетом улемов.'
-            )}
-          </EmptyState>
-        ) : (
-          <>
-            <p className="mb-4 text-[15px] text-muted" aria-live="polite">
-              Найдено {campaigns.length} {plural(campaigns.length, ['сбор', 'сбора', 'сборов'])}
-            </p>
-            <div className="grid gap-3 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {campaigns.map((c, i) => (
-                <CatalogCard key={c.id} campaign={c} index={i} />
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-    </>
+      {campaigns.length === 0 ? (
+        <EmptyState
+          icon={<IconSearch />}
+          title={filtered ? 'Ничего не найдено' : 'Сейчас нет активных кампаний'}
+        >
+          {filtered ? (
+            <Link href={category ? `/campaigns?category=${category}` : '/campaigns'} className="link-action">
+              Сбросить поиск
+            </Link>
+          ) : (
+            'Новые сборы появятся после одобрения Комитетом улемов.'
+          )}
+        </EmptyState>
+      ) : (
+        <section aria-labelledby="campaigns-found" className="panel">
+          <h2 id="campaigns-found" className="overtitle" aria-live="polite">
+            Найдено {campaigns.length} {plural(campaigns.length, ['сбор', 'сбора', 'сборов'])}
+          </h2>
+          <div className="grid gap-2 mt-3 sm:grid-cols-2 lg:grid-cols-3">
+            {campaigns.map((c) => (
+              <CampaignCard key={c.id} campaign={c} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
 
 function CategoryLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link href={href} aria-current={active ? 'page' : undefined} className="chip h-11 font-semibold shrink-0">
+    <Link href={href} aria-current={active ? 'page' : undefined} className="chip-white min-h-11 shrink-0">
       {children}
     </Link>
   );

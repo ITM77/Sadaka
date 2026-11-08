@@ -1,41 +1,39 @@
 import Link from 'next/link';
+import { IconMoon } from './icons';
 
-/** Знак: ромб и квадрат латунью (восьмиконечная звезда) с лазуритовой точкой. */
-export function LogoMark({ size = 34, onDark = false }: { size?: number; onDark?: boolean }) {
-  const line = onDark ? '#C9A25A' : '#9A6B1F';
-  const dot = onDark ? '#F1D9A6' : '#0F5C55';
+/** Знак «Стиля 2»: полумесяц в оранжевом квадрате 36px со скруглением 12px. */
+export function LogoMark({ size = 36 }: { size?: number; onDark?: boolean }) {
   return (
-    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 3 L29 16 L16 29 L3 16 Z" stroke={line} strokeWidth="1.5" />
-      <rect x="6.8" y="6.8" width="18.4" height="18.4" stroke={line} strokeWidth="1.5" />
-      <circle cx="16" cy="16" r="4.5" fill={dot} />
-    </svg>
+    <span
+      aria-hidden="true"
+      className="rounded-xl bg-accent-500 text-ink flex items-center justify-center shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <IconMoon size={Math.round(size * 0.56)} />
+    </span>
   );
 }
 
 export default function Logo({
   href = '/',
-  onDark = false,
+  subtitle = 'Комитет улемов РТ',
   suffix,
 }: {
   href?: string;
-  onDark?: boolean;
+  /** Подпись под названием (в макете — «Шӯрои уламои ҶТ») */
+  subtitle?: string | null;
+  /** Совместимость: старый параметр подписи */
   suffix?: string;
+  onDark?: boolean;
 }) {
+  const sub = suffix ?? subtitle;
   return (
-    <Link
-      href={href}
-      className={`inline-flex items-center gap-2.5 no-underline ${onDark ? 'text-paper' : 'text-night'}`}
-    >
-      <LogoMark onDark={onDark} />
-      <span className="text-[20px] sm:text-[22px] font-bold" style={{ letterSpacing: '-0.01em' }}>
-        Садака
+    <Link href={href} className="inline-flex items-center gap-2.5 min-h-[44px] text-ink hover:text-ink no-underline">
+      <LogoMark />
+      <span className="flex flex-col">
+        <span className="text-base leading-[22px] font-semibold">Садака</span>
+        {sub && <span className="text-xs leading-[17px] text-muted">{sub}</span>}
       </span>
-      {suffix && (
-        <span className={`hidden sm:inline text-sm font-medium ${onDark ? 'text-mist' : 'text-muted'}`}>
-          {suffix}
-        </span>
-      )}
     </Link>
   );
 }

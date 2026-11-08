@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Alert, CabinetPage, Loading, MosqueStatusBadge, StatusBadge } from '@/components/cabinet/ui';
-import EmptyState from '@/components/EmptyState';
-import { IconMosque, IconPlus } from '@/components/icons';
-import { ApiError, apiFetch, formatTJS, Mosque } from '@/lib/api';
+import { IconChevronRight, IconInfo, IconMosque, IconPlus } from '@/components/icons';
+import { ApiError, apiFetch, formatMoney, Mosque } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isEnded, MosqueCabinetData, needsReport } from '@/lib/cabinet';
 
@@ -58,99 +57,106 @@ export default function CabinetHome() {
       title="Мои мечети"
       actions={
         mosques && mosques.length > 0 ? (
-          <Link href="/cabinet/mosques/new" className="btn btn-secondary">
+          <Link href="/cabinet/mosques/new" className="btn btn-white">
             <IconPlus size={18} />
             Ещё одна мечеть
           </Link>
         ) : undefined
       }
     >
-      <div className="flex flex-col gap-6 sm:gap-8">
-        {error && <Alert>{error}</Alert>}
-        {!mosques && !error && <Loading />}
+      <div className="layout-aside">
+        <div className="min-w-0 flex flex-col gap-3">
+          {error && <Alert>{error}</Alert>}
+          {!mosques && !error && <Loading />}
 
-        {mosques && mosques.length === 0 && (
-          <EmptyState icon={<IconMosque size={28} />} title="Вы ещё не зарегистрировали мечеть">
-            <p className="mb-6">
-              Подайте заявку — Комитет улемов проверит мечеть. После одобрения вы сможете открывать сборы и публиковать
-              отчёты.
-            </p>
-            <Link href="/cabinet/mosques/new" className="btn btn-primary">
-              Подать заявку
-            </Link>
-          </EmptyState>
-        )}
+          {mosques && mosques.length === 0 && (
+            <section className="panel-lg text-center flex flex-col items-center gap-2.5">
+              <span className="icon-round w-14 h-14">
+                <IconMosque size={24} />
+              </span>
+              <h2 className="title-sm">Вы ещё не зарегистрировали мечеть</h2>
+              <p className="body-text max-w-[420px]">
+                Подайте заявку — Комитет улемов проверит мечеть. После одобрения вы сможете открывать сборы и публиковать
+                отчёты.
+              </p>
+              <Link href="/cabinet/mosques/new" className="btn btn-primary mt-2">
+                Подать заявку
+              </Link>
+            </section>
+          )}
 
-        {mosques && mosques.length > 0 && (
-          <ul className="flex flex-col gap-4">
-            {mosques.map((m) => {
-              const sum = summaries[m.id];
-              const approved = m.status === 'approved';
-              return (
-                <li key={m.id}>
-                  <Link
-                    href={`/cabinet/mosques/${m.id}`}
-                    className="card-hover flex flex-wrap items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[22px] p-5 sm:p-6 text-ink"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] flex items-center justify-center shrink-0 ${
-                        approved ? 'bg-mint text-primary-600' : 'bg-paper text-muted'
-                      }`}
-                    >
-                      <IconMosque size={32} strokeWidth={1.4} />
-                    </span>
-                    <div className="flex-1 basis-[220px] min-w-0">
-                      <p className="text-lg sm:text-xl font-bold break-words">{m.name}</p>
-                      <p className="mt-0.5 text-[15px] text-muted break-words">
-                        {m.city} · {m.address}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {sum && sum.owing > 0 && <StatusBadge tone="wait">Нужен отчёт</StatusBadge>}
-                      <MosqueStatusBadge status={m.status} />
-                    </div>
-                    {m.moderation_note && !approved && (
-                      <p className="basis-full text-sm text-red-700">
-                        <strong>Комитет:</strong> {m.moderation_note}
-                      </p>
-                    )}
-                    {sum && (
-                      <dl className="basis-full grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-dark-100">
-                        <div>
-                          <dt className="text-[13px] text-muted">Идёт сборов</dt>
-                          <dd className="mt-0.5 text-lg font-bold">{sum.active}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-[13px] text-muted">На одобрении</dt>
-                          <dd className="mt-0.5 text-lg font-bold">{sum.pending}</dd>
-                        </div>
-                        <div className="col-span-2 sm:col-span-1">
-                          <dt className="text-[13px] text-muted">Собрано за всё время</dt>
-                          <dd className="mt-0.5 text-lg font-bold">{formatTJS(sum.collected)}</dd>
-                        </div>
-                      </dl>
-                    )}
-                  </Link>
+          {mosques && mosques.length > 0 && (
+            <section className="panel !py-1" aria-label="Мечети">
+              <ul className="divide-y divide-line">
+                {mosques.map((m) => {
+                  const sum = summaries[m.id];
+                  const approved = m.status === 'approved';
+                  return (
+                    <li key={m.id}>
+                      <Link
+                        href={`/cabinet/mosques/${m.id}`}
+                        className="group flex items-center gap-3 min-h-[80px] py-3 text-ink hover:text-ink"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`icon-tile self-start mt-0.5 ${approved ? '' : '!bg-app !text-muted'}`}
+                        >
+                          <IconMosque />
+                        </span>
+                        <span className="flex-1 min-w-0 flex flex-col gap-1">
+                          <span className="block text-base leading-[22px] font-semibold break-words group-hover:text-accent-700 transition-colors">
+                            {m.name}
+                          </span>
+                          <span className="block caption break-words">
+                            {m.city} · {m.address}
+                          </span>
+                          <span className="flex flex-wrap gap-1.5 mt-1">
+                            <MosqueStatusBadge status={m.status} />
+                            {sum && sum.owing > 0 && <StatusBadge tone="wait">Нужен отчёт</StatusBadge>}
+                          </span>
+                          {m.moderation_note && !approved && (
+                            <span className="block text-[13px] leading-[18px] text-[#B42318]">
+                              <strong className="font-semibold">Комитет:</strong> {m.moderation_note}
+                            </span>
+                          )}
+                          {sum && (
+                            <span className="block caption tabular">
+                              Идёт сборов: {sum.active} · На одобрении: {sum.pending} · Собрано за всё время:{' '}
+                              <span className="font-medium text-ink whitespace-nowrap">{formatMoney(sum.collected)}</span>
+                            </span>
+                          )}
+                        </span>
+                        <IconChevronRight size={18} className="text-hint shrink-0" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </div>
+
+        <aside className="aside-sticky flex flex-col gap-3">
+          <section className="panel" aria-labelledby="how-title">
+            <h2 id="how-title" className="overtitle">
+              Как работает кабинет
+            </h2>
+            <ol className="mt-3 flex flex-col gap-2">
+              {STEPS.map((s, i) => (
+                <li key={s} className="tile !py-2.5 flex items-center gap-3">
+                  <span className="step-num !bg-white" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm leading-5 text-ink">{s}</span>
                 </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <section className="bg-white border border-line rounded-[20px] sm:rounded-[22px] p-5 sm:p-7">
-          <h2 className="text-xl font-bold mb-5">Как работает кабинет</h2>
-          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {STEPS.map((s, i) => (
-              <li key={s} className="flex gap-3">
-                <span className="step-num !w-8 !h-8 !text-sm" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <span className="text-[15px] leading-normal text-dark-700">{s}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+              ))}
+            </ol>
+          </section>
+          <div className="infobox">
+            <IconInfo size={18} className="shrink-0 mt-px" />
+            <span>Нет отчёта — нет нового сбора. Отчёт по завершённому сбору открывает дорогу следующему.</span>
+          </div>
+        </aside>
       </div>
     </CabinetPage>
   );

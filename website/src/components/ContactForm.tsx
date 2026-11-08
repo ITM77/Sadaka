@@ -28,33 +28,31 @@ export default function ContactForm() {
   };
 
   return (
-    <form className="flex flex-col gap-[18px]" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="contact-name" className="label text-[15px]">
+          <label htmlFor="contact-name" className="label">
             Имя
           </label>
-          <input id="contact-name" name="name" type="text" required autoComplete="name" className="input h-[52px]" />
+          <input id="contact-name" name="name" type="text" required autoComplete="name" className="input" />
         </div>
         <div>
-          <label htmlFor="contact-reply" className="label text-[15px]">
+          <label htmlFor="contact-reply" className="label">
             Телефон или email
           </label>
-          <input id="contact-reply" name="reply" type="text" required className="input h-[52px]" />
+          <input id="contact-reply" name="reply" type="text" required className="input" />
         </div>
       </div>
       <fieldset>
-        <legend className="label text-[15px]">Тема</legend>
+        <legend className="label">Тема</legend>
         <div className="flex flex-wrap gap-2">
           {TOPICS.map((t) => {
             const on = topic === t;
             return (
               <label
                 key={t}
-                className={`inline-flex items-center gap-2 h-11 px-4 rounded-full text-[15px] cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-600 has-[:focus-visible]:ring-offset-2 ${
-                  on
-                    ? 'border-[1.5px] border-primary-600 bg-mint text-primary-700 font-semibold'
-                    : 'border border-dark-300 bg-white font-medium hover:border-primary-300'
+                className={`chip min-h-[44px] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-700 ${
+                  on ? '!bg-accent-100 !text-accent-700' : ''
                 }`}
               >
                 <input
@@ -63,7 +61,7 @@ export default function ContactForm() {
                   value={t}
                   checked={on}
                   onChange={() => setTopic(t)}
-                  className="w-4 h-4 text-primary-600 border-dark-300 focus:ring-0 focus:ring-offset-0"
+                  className="sr-only"
                 />
                 {t}
               </label>
@@ -72,12 +70,12 @@ export default function ContactForm() {
         </div>
       </fieldset>
       <div>
-        <label htmlFor="contact-message" className="label text-[15px]">
+        <label htmlFor="contact-message" className="label">
           Сообщение
         </label>
         <textarea id="contact-message" name="message" rows={5} required className="input resize-y" />
       </div>
-      <button type="submit" className="btn btn-primary btn-lg btn-block">
+      <button type="submit" className="btn btn-primary btn-lg btn-block sm:w-auto sm:self-start">
         Отправить
       </button>
     </form>

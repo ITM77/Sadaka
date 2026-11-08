@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 /* ===========================================================
-   «Лазурит и латунь» — базовые стили
+   «Стиль 2» — база
+   Фон приложения #E9F1F0, белые панели 28px без рамок и теней,
+   кнопки-пилюли, accent #FF7733 с тёмным текстом, sec #03676C.
    =========================================================== */
 @layer base {
   * {
     @apply box-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
@@ -16,7 +19,7 @@
   }
 
   body {
-    @apply bg-paper text-ink font-sans antialiased;
+    @apply bg-app text-ink font-sans antialiased;
   }
 
   h1,
@@ -24,16 +27,24 @@
   h3,
   h4 {
     @apply font-display;
-    letter-spacing: -0.015em;
+  }
+
+  a {
+    @apply text-accent-700 hover:text-accent-800;
   }
 
   ::selection {
-    @apply bg-brass-200 text-night;
+    @apply bg-accent-100 text-ink;
   }
 
   :focus-visible {
-    outline: 2px solid #0f5c55;
+    outline: 2px solid #b34a12;
     outline-offset: 2px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-hint;
   }
 
   /* fieldset по умолчанию не сжимается уже своего содержимого — на телефоне это ломает формы */
@@ -47,162 +58,254 @@
   summary::-webkit-details-marker {
     display: none;
   }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-/* ===========================================================
-   Компоненты
-   =========================================================== */
 @layer components {
-  /* --- Сетка --- */
+  /* --- Сетка: контент 1176px, поля 32px на вебе и 16px на телефоне --- */
   .container-custom {
-    @apply w-full max-w-[1200px] mx-auto px-4 sm:px-8;
+    @apply w-full max-w-[1176px] mx-auto px-4 md:px-8;
+  }
+
+  .page {
+    @apply container-custom pt-4 pb-24 md:pt-7 md:pb-14;
+  }
+
+  /* Основная колонка + липкая правая колонка 340px */
+  .layout-aside {
+    @apply grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start;
   }
 
   .section {
-    @apply py-14 md:py-24;
+    @apply py-6 md:py-10;
   }
 
   .section-sm {
-    @apply py-10 md:py-14;
+    @apply py-4 md:py-6;
   }
 
   /* --- Типографика --- */
-  .eyebrow {
-    @apply text-[13px] sm:text-[15px] font-semibold uppercase text-brass-600;
+  /* overtitle: 500 11/15, .04em, uppercase, sec */
+  .eyebrow,
+  .overtitle {
+    @apply text-[11px] leading-[15px] font-medium uppercase text-sec;
     letter-spacing: 0.04em;
   }
 
+  .h-display,
+  .h-page,
+  .h-section,
+  .title {
+    @apply text-2xl leading-[30px] font-semibold text-ink;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
   .h-display {
-    @apply text-[38px] leading-[1.08] sm:text-5xl lg:text-[64px] lg:leading-[1.05] font-bold;
+    @apply md:text-[32px] md:leading-[38px];
+  }
+
+  .title-sm {
+    @apply text-base leading-[22px] font-semibold text-ink;
+  }
+
+  .body-text {
+    @apply text-sm leading-5 text-body;
+  }
+
+  .caption {
+    @apply text-xs leading-[17px] text-muted;
+  }
+
+  .num-lg {
+    @apply text-[26px] leading-8 font-semibold tabular;
     letter-spacing: -0.02em;
   }
 
-  .h-section {
-    @apply text-[28px] leading-[1.15] md:text-[40px] font-bold;
-    letter-spacing: -0.02em;
-  }
-
-  .h-page {
-    @apply text-[32px] leading-[1.1] md:text-[48px] font-bold;
-    letter-spacing: -0.02em;
-  }
-
-  /* --- Кнопки --- */
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-[15px] font-semibold
-      transition-colors duration-150 select-none whitespace-nowrap
-      disabled:opacity-60 disabled:pointer-events-none;
-  }
-
-  .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 hover:text-white;
-  }
-
-  .btn-secondary {
-    @apply bg-white text-ink border border-line hover:bg-paper hover:border-dark-300;
-  }
-
-  .btn-ghost {
-    @apply bg-transparent text-ink hover:bg-mint hover:text-primary-700;
-  }
-
-  .btn-outline {
-    @apply border border-primary-600 text-primary-600 bg-transparent hover:bg-mint;
-  }
-
-  .btn-gold {
-    @apply bg-gold text-night hover:bg-brass-300;
-  }
-
-  /* Контурная кнопка на тёмном (ночном / лазуритовом) фоне */
-  .btn-on-dark {
-    @apply border border-paper/35 text-paper bg-transparent hover:bg-paper/10 hover:text-paper;
-  }
-
-  .btn-danger {
-    @apply bg-white text-red-700 border border-red-200 hover:bg-red-50;
-  }
-
-  .btn-sm {
-    @apply h-10 px-4 text-sm rounded-[10px];
-  }
-
-  .btn-lg {
-    @apply h-14 px-7 text-[17px] rounded-[14px];
-  }
-
-  .btn-block {
-    @apply w-full;
-  }
-
-  /* --- Карточки --- */
+  /* --- Панели --- */
+  .panel,
   .card {
-    @apply relative bg-white rounded-card border border-line;
+    @apply relative bg-white rounded-card p-4 md:p-5;
+  }
+
+  .panel-lg {
+    @apply relative bg-white rounded-card p-5 md:p-7;
+  }
+
+  /* Липкая правая колонка (объявлена после .panel, чтобы перекрыть его position: relative) */
+  .aside-sticky {
+    @apply lg:sticky lg:top-20;
+  }
+
+  /* Плитка внутри белой панели */
+  .tile {
+    @apply bg-app rounded-tile p-3.5;
   }
 
   .card-hover {
-    @apply card transition-[border-color,box-shadow,transform] duration-200
-      hover:border-primary-200 hover:shadow-md hover:-translate-y-0.5;
+    @apply card transition-colors duration-150 hover:bg-white/90;
   }
 
   .card-interactive {
     @apply card-hover cursor-pointer;
   }
 
-  .panel {
-    @apply relative overflow-hidden rounded-[20px] md:rounded-panel px-5 py-8 sm:px-8 md:px-12 md:py-14;
+  /* Строки «ключ — значение» на плитке */
+  .kv {
+    @apply bg-app rounded-tile px-3.5 py-1;
+  }
+  .kv > * {
+    @apply flex justify-between items-center gap-3 min-h-[44px] border-b border-white text-sm;
+  }
+  .kv > *:last-child {
+    @apply border-b-0;
   }
 
-  /* --- Метки --- */
+  /* Инфоблок sec */
+  .infobox {
+    @apply flex gap-2.5 items-start bg-sec-soft text-sec rounded-tile px-3.5 py-3 text-[13px] leading-[18px];
+  }
+  .infobox > span,
+  .infobox > p,
+  .infobox > div {
+    @apply text-ink;
+  }
+
+  /* --- Кнопки-пилюли --- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-full border-0 text-[15px] leading-5
+      font-semibold whitespace-nowrap select-none transition-colors duration-150 cursor-pointer
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* accent: не больше двух на экране */
+  .btn-primary {
+    @apply bg-accent-500 text-ink hover:bg-accent-600 hover:text-ink active:bg-accent-600;
+  }
+
+  .btn-secondary {
+    @apply bg-app text-ink hover:bg-[#DDE7E6] hover:text-ink;
+  }
+
+  /* Вторичная на фоне приложения (не на белой панели) */
+  .btn-white {
+    @apply bg-white text-ink hover:bg-accent-100 hover:text-accent-700;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-accent-700 hover:bg-accent-100 hover:text-accent-700;
+  }
+
+  .btn-outline {
+    @apply bg-white text-ink ring-[1.5px] ring-inset ring-dark-200 hover:bg-app hover:text-ink;
+  }
+
+  /* Подтверждение (одобрить / принять) — зелёная пилюля, не тратит лимит оранжевых кнопок */
+  .btn-ok {
+    @apply bg-ok-soft text-ok hover:bg-[#D3EDDE] hover:text-ok;
+  }
+
+  .btn-danger {
+    @apply bg-[#FDECEC] text-[#B42318] hover:bg-[#FAD9D9] hover:text-[#B42318];
+  }
+
+  /* Совместимость со старыми классами */
+  .btn-gold {
+    @apply btn-primary;
+  }
+  .btn-on-dark {
+    @apply btn-white;
+  }
+
+  .btn-sm {
+    @apply min-h-[40px] px-4 text-sm;
+  }
+
+  .btn-lg {
+    @apply min-h-[50px] px-7 text-base;
+  }
+
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* Круглая иконка-кнопка 44px */
+  .btn-icon {
+    @apply inline-flex items-center justify-center w-11 h-11 rounded-full bg-app text-ink shrink-0
+      hover:bg-[#DDE7E6] transition-colors;
+  }
+
+  /* Текстовая ссылка-действие */
+  .link-action {
+    @apply text-sm font-semibold text-accent-700 hover:text-accent-800 cursor-pointer;
+  }
+
+  /* --- Метки-статусы (пилюли 24px) --- */
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-semibold
-      bg-paper text-muted whitespace-nowrap;
+    @apply inline-flex items-center gap-1 min-h-[24px] px-2 rounded-full text-xs font-medium whitespace-nowrap
+      bg-app text-body;
   }
 
-  .badge-primary {
-    @apply bg-mint text-primary-700;
+  .badge-success,
+  .badge-ok {
+    @apply bg-ok-soft text-ok;
   }
 
-  .badge-brass {
-    @apply bg-sand text-brass-700;
+  .badge-primary,
+  .badge-sec {
+    @apply bg-sec-soft text-sec;
   }
 
-  .badge-success {
-    @apply bg-mint text-primary-700;
-  }
-
+  /* «Дар тафтиш» / на проверке */
   .badge-warning {
-    @apply bg-sand text-brass-800;
+    @apply bg-[#FDF0DC] text-[#A35A00];
+  }
+
+  .badge-brass,
+  .badge-accent {
+    @apply bg-accent-100 text-accent-700;
   }
 
   .badge-danger {
-    @apply bg-red-50 text-red-700;
+    @apply bg-[#FDECEC] text-[#B42318];
   }
 
   .badge-neutral {
-    @apply bg-paper text-muted border border-line;
+    @apply bg-app text-body;
   }
 
-  /* Иконка в плашке */
+  /* Иконка в мягкой плашке 44px */
   .icon-tile {
-    @apply w-[52px] h-[52px] rounded-[14px] bg-mint text-primary-600 flex items-center justify-center shrink-0;
+    @apply w-11 h-11 rounded-xl bg-sec-soft text-sec flex items-center justify-center shrink-0;
   }
 
-  /* Номер шага в латунном кольце */
+  .icon-round {
+    @apply w-11 h-11 rounded-full bg-sec-soft text-sec flex items-center justify-center shrink-0;
+  }
+
+  /* Номер шага */
   .step-num {
-    @apply w-11 h-11 rounded-full border-[1.5px] border-brass-400 text-brass-600 flex items-center justify-center
-      text-lg font-bold shrink-0;
+    @apply w-9 h-9 rounded-full bg-sec-soft text-sec flex items-center justify-center text-sm font-semibold shrink-0;
   }
 
   /* --- Формы --- */
   .label {
-    @apply block text-sm font-semibold text-ink mb-2;
+    @apply block text-sm font-medium text-ink mb-1.5;
   }
 
+  /* Поле на белой панели: фон #E9F1F0, рамка 2px прозрачная, фокус — #B34A12 */
   .input {
-    @apply block w-full h-12 px-4 rounded-xl border border-line bg-white text-ink text-base
-      placeholder:text-dark-400 transition-colors
-      focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15 focus:outline-none;
+    @apply block w-full h-12 px-3.5 rounded-xl border-2 border-transparent bg-app text-ink text-base
+      placeholder:text-hint transition-colors
+      focus:border-accent-700 focus:ring-0 focus:outline-none;
+  }
+
+  /* Поле на фоне приложения */
+  .input-white {
+    @apply input bg-white;
   }
 
   textarea.input {
@@ -214,146 +317,142 @@
   }
 
   .hint {
-    @apply mt-1.5 text-sm text-muted;
+    @apply mt-1.5 text-xs leading-[17px] text-muted;
   }
 
   .alert {
-    @apply rounded-xl px-4 py-3 text-[15px] leading-relaxed;
+    @apply rounded-tile px-3.5 py-3 text-[13px] leading-[18px];
   }
 
   .alert-error {
-    @apply alert bg-red-50 text-red-800 border border-red-200;
+    @apply alert bg-[#FDECEC] text-[#B42318];
   }
 
   .alert-success {
-    @apply alert bg-mint text-primary-800 border border-primary-200;
+    @apply alert bg-ok-soft text-ok;
   }
 
   .alert-info {
-    @apply alert bg-sand text-brass-800 border border-brass-200;
+    @apply alert bg-sec-soft text-ink;
   }
 
-  /* Сегментированный переключатель (вкладки, язык) */
+  /* Сегментированный переключатель: дорожка #E9F1F0, выбранный — белый с тенью, текст #B34A12 */
   .segmented {
-    @apply inline-flex p-1 rounded-xl bg-paper border border-line;
+    @apply flex gap-1 p-1 rounded-full bg-app;
   }
 
   .segmented > * {
-    @apply h-10 px-4 rounded-[9px] text-[15px] font-semibold text-muted inline-flex items-center justify-center
-      transition-colors;
+    @apply flex-1 min-h-[40px] px-4 rounded-full inline-flex items-center justify-center text-[15px] font-semibold
+      text-ink whitespace-nowrap transition-colors;
   }
 
   .segmented > [aria-selected='true'],
   .segmented > [aria-pressed='true'],
-  .segmented > [aria-current='page'] {
-    @apply bg-white text-ink shadow-xs;
+  .segmented > [aria-current='page'],
+  .segmented > [aria-checked='true'] {
+    @apply bg-white text-accent-700 shadow-xs;
   }
 
-  /* Чип фильтра */
+  /* Чип 36px: выбранный — #FFEEE4 / #B34A12 */
   .chip {
-    @apply inline-flex items-center h-10 px-4 rounded-full border border-line bg-white text-[15px] font-medium
-      text-dark-700 whitespace-nowrap transition-colors hover:border-primary-300;
+    @apply inline-flex items-center gap-1.5 min-h-[36px] px-3.5 rounded-full bg-app text-[13px] leading-[18px] font-medium
+      text-ink whitespace-nowrap cursor-pointer transition-colors hover:bg-accent-100 hover:text-accent-700;
+  }
+
+  /* Чип на фоне приложения */
+  .chip-white {
+    @apply chip bg-white;
   }
 
   .chip[aria-pressed='true'],
-  .chip[aria-current='page'] {
-    @apply bg-primary-600 border-primary-600 text-white;
+  .chip[aria-current='page'],
+  .chip[aria-checked='true'],
+  .chip-white[aria-pressed='true'],
+  .chip-white[aria-current='page'] {
+    @apply bg-accent-100 text-accent-700;
   }
 
-  /* --- Прогресс --- */
+  /* --- Прогресс: 6px, дорожка белая на плитке / #E9F1F0 на панели, заливка sec --- */
   .progress-track {
-    @apply w-full rounded-full bg-track overflow-hidden;
+    @apply w-full rounded-full bg-app overflow-hidden;
+  }
+
+  .progress-track-white {
+    @apply progress-track bg-white;
   }
 
   .progress-fill {
-    @apply h-full rounded-full bg-primary-600 transition-[width] duration-700;
+    @apply h-full rounded-full bg-sec transition-[width] duration-700;
   }
 
-  /* --- Орнамент «гирих» (восьмиконечная звезда), рисуется ::before поверх фона --- */
-  .girih {
-    position: relative;
-    isolation: isolate;
+  /* Разделитель внутри панели */
+  .divider {
+    @apply h-px bg-line;
   }
 
-  .girih::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' fill='none' stroke='%23C9A25A' stroke-width='1'%3E%3Cpath d='M32 12 52 32 32 52 12 32Z'/%3E%3Crect x='17.9' y='17.9' width='28.2' height='28.2'/%3E%3Ccircle cx='32' cy='32' r='4'/%3E%3C/svg%3E");
-    background-size: 64px 64px;
-    opacity: var(--girih-opacity, 0.14);
+  /* Нижний лист на телефоне */
+  .sheet-backdrop {
+    @apply fixed inset-0 z-50 bg-[rgba(20,24,30,0.45)] animate-fade-in;
   }
 
-  .girih-brass::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' fill='none' stroke='%239A6B1F' stroke-width='1'%3E%3Cpath d='M32 12 52 32 32 52 12 32Z'/%3E%3Crect x='17.9' y='17.9' width='28.2' height='28.2'/%3E%3C/svg%3E");
-    --girih-opacity: 0.1;
+  .sheet {
+    @apply fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-card px-4 pt-2.5 pb-[max(20px,env(safe-area-inset-bottom))]
+      animate-sheet;
   }
 
-  .girih-faint {
-    --girih-opacity: 0.07;
+  .sheet-handle {
+    @apply w-10 h-1 rounded-sm bg-dark-200 mx-auto mb-3.5;
   }
 
+  /* Скелетон */
+  .skeleton {
+    @apply rounded-xl animate-shimmer;
+    background: linear-gradient(90deg, #e9f1f0 0, #f4f8f8 60px, #e9f1f0 120px) #e9f1f0;
+    background-size: 360px 100%;
+  }
+
+  /* --- Совместимость: классы прошлого стиля без оформления --- */
+  .girih,
+  .girih-brass,
+  .girih-faint,
   .girih-strong {
-    --girih-opacity: 0.35;
+    position: relative;
   }
 
-  /* Тёмные поверхности */
-  .surface-night {
-    @apply bg-night text-paper;
-  }
-
-  .surface-lazurite {
-    @apply bg-primary-600 text-paper;
-  }
-
+  .surface-night,
+  .surface-lazurite,
   .surface-sand {
-    @apply bg-sand text-brass-900;
+    @apply bg-white text-ink;
   }
 
-  /* --- Совместимость со старыми классами --- */
   .text-gradient {
-    @apply text-primary-600;
+    @apply text-accent-700;
   }
 
   .text-gradient-light {
-    @apply text-gold;
+    @apply text-accent-700;
   }
 
   .text-responsive {
-    @apply h-section;
+    @apply title;
   }
 
   .text-responsive-lg {
-    @apply h-page;
+    @apply title;
   }
 
   .bg-gradient-primary,
-  .bg-gradient-accent {
-    @apply bg-primary-600;
-  }
-
+  .bg-gradient-accent,
   .bg-gradient-hero {
-    @apply bg-paper;
+    @apply bg-app;
   }
 
   .glass {
-    @apply bg-white/90 backdrop-blur-md;
+    @apply bg-white;
   }
 
-  /* --- Появление при прокрутке --- */
   .animate-on-scroll {
-    opacity: 0;
-    transform: translateY(16px);
-    transition:
-      opacity 0.6s ease-out,
-      transform 0.6s ease-out;
-  }
-
-  .animate-on-scroll.visible {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -362,17 +461,10 @@
     scroll-behavior: auto;
   }
 
-  .animate-on-scroll {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation: none !important;
+    transition: none !important;
   }
 }

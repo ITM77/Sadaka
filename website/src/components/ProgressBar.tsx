@@ -1,17 +1,20 @@
+/** Прогресс «Стиля 2»: 6px, заливка sec. onTile — белая дорожка (для плитки #E9F1F0). */
 export default function ProgressBar({
   value,
   label,
   size = 'md',
+  onTile = false,
 }: {
   value: number;
   label?: string;
   size?: 'sm' | 'md' | 'lg';
+  onTile?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, value));
-  const h = size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2';
+  const h = size === 'lg' ? 'h-2' : 'h-1.5';
   return (
     <div
-      className={`progress-track ${h}`}
+      className={`${onTile ? 'progress-track-white' : 'progress-track'} ${h}`}
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}

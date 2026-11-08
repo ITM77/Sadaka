@@ -144,6 +144,11 @@ export function formatTJS(amount: number) {
   return `${money.format(amount)} TJS`;
 }
 
+/** Сумма в стиле макета «Стиль 2»: «74 300 с.» (сомони). */
+export function formatMoney(amount: number) {
+  return `${money.format(amount)} с.`;
+}
+
 const dateFmt = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
   month: 'long',

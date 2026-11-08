@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { IconMosque, IconSavob, IconShield } from '@/components/icons';
+import Link from 'next/link';
+import { IconCheck, IconClose, IconMosque, IconSavob, IconShield } from '@/components/icons';
 
 export const metadata: Metadata = {
   title: 'О проекте — Садака',
@@ -23,20 +24,17 @@ const after = [
 
 const roles = [
   {
-    icon: <IconShield size={26} />,
-    tile: 'bg-mint text-primary-600',
+    icon: <IconShield />,
     title: 'Комитет улемов',
     text: 'Одобряет мечети и сборы, проверяет отчёты, видит статистику по стране и блокирует нарушителей.',
   },
   {
-    icon: <IconMosque size={26} strokeWidth={1.6} />,
-    tile: 'bg-[#E4ECF1] text-[#1B4D63]',
+    icon: <IconMosque />,
     title: 'Мечеть',
     text: 'Открывает сборы с целью и сроком, ведёт QR-код для прихожан и публикует отчёт после каждого сбора.',
   },
   {
-    icon: <IconSavob size={26} />,
-    tile: 'bg-sand text-brass-700',
+    icon: <IconSavob />,
     title: 'Жертвователь',
     text: 'Выбирает мечеть или сбор, жертвует онлайн, получает Савоб и видит отчёт о расходах.',
   },
@@ -51,78 +49,88 @@ const partners = [
 
 export default function About() {
   return (
-    <>
-      <section className="container-custom pt-10 pb-8 md:pt-[72px] md:pb-12 flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-12">
-        <div className="lg:flex-[1.5] min-w-0 flex flex-col gap-3 md:gap-4">
-          <p className="eyebrow">
-            О проекте · <span lang="ar">صدقة</span>
-          </p>
-          <h1 className="text-[34px] leading-[1.1] sm:text-5xl lg:text-[56px] lg:leading-[1.05] font-bold" style={{ letterSpacing: '-0.025em' }}>
-            Традиция садақа — в цифровом формате
-          </h1>
-        </div>
-        <p className="lg:flex-1 min-w-0 text-[17px] md:text-lg leading-[1.7] text-dark-700">
+    <div className="page flex flex-col gap-3 md:gap-4">
+      <section className="panel-lg flex flex-col gap-1.5">
+        <p className="overtitle">
+          О проекте · <span lang="ar">صدقة</span>
+        </p>
+        <h1 className="title">Традиция садақа — в цифровом формате</h1>
+        <p className="body-text max-w-[680px]">
           Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана
           показать, на что потрачены деньги.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href="/campaigns" className="btn btn-primary">
+            Выбрать сбор
+          </Link>
+          <Link href="/cabinet" className="btn btn-secondary">
+            Кабинет мечети
+          </Link>
+        </div>
       </section>
 
-      <section className="container-custom py-4 md:py-6">
-        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
-          <div className="card p-6 md:p-7">
-            <h2 className="text-xl font-bold mb-4">Что мешало раньше</h2>
-            <ul className="list-disc pl-5 flex flex-col gap-2.5 text-base leading-normal text-dark-700 marker:text-dark-400">
+      <section className="panel" aria-labelledby="change-title">
+        <h2 id="change-title" className="overtitle">
+          Зачем нужна платформа
+        </h2>
+        <div className="grid md:grid-cols-2 gap-2 mt-3">
+          <div className="tile">
+            <h3 className="title-sm">Что мешало раньше</h3>
+            <ul className="mt-2 flex flex-col">
               {before.map((t) => (
-                <li key={t}>{t}</li>
+                <li key={t} className="flex items-start gap-2.5 py-1.5 body-text">
+                  <IconClose size={18} className="text-muted shrink-0 mt-px" />
+                  {t}
+                </li>
               ))}
             </ul>
           </div>
-          <div className="surface-lazurite rounded-card p-6 md:p-7">
-            <h2 className="text-xl font-bold mb-4">Что меняет Садака</h2>
-            <ul className="list-disc pl-5 flex flex-col gap-2.5 text-base leading-normal text-[#D4E3DF] marker:text-gold">
+          <div className="tile !bg-sec-soft">
+            <h3 className="title-sm">Что меняет Садака</h3>
+            <ul className="mt-2 flex flex-col">
               {after.map((t) => (
-                <li key={t}>{t}</li>
+                <li key={t} className="flex items-start gap-2.5 py-1.5 text-sm leading-5 text-ink">
+                  <IconCheck size={18} className="text-sec shrink-0 mt-px" />
+                  {t}
+                </li>
               ))}
             </ul>
           </div>
         </div>
       </section>
 
-      <section className="container-custom py-10 md:py-12">
-        <h2 className="text-[26px] leading-tight md:text-[36px] font-bold mb-5 md:mb-6" style={{ letterSpacing: '-0.02em' }}>
+      <section className="panel" aria-labelledby="roles-title">
+        <p className="overtitle">Участники</p>
+        <h2 id="roles-title" className="title mt-1.5">
           Три участника — одна система доверия
         </h2>
-        <div className="grid md:grid-cols-3 gap-4 md:gap-5">
+        <div className="grid md:grid-cols-3 gap-2 mt-4">
           {roles.map((r) => (
-            <article key={r.title} className="card p-6 md:p-7 flex flex-col gap-3">
-              <span aria-hidden="true" className={`icon-tile ${r.tile}`}>
+            <article key={r.title} className="tile flex flex-col gap-2.5">
+              <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-white text-sec flex items-center justify-center">
                 {r.icon}
               </span>
-              <h3 className="text-xl font-bold">{r.title}</h3>
-              <p className="text-base leading-relaxed text-muted">{r.text}</p>
+              <h3 className="title-sm">{r.title}</h3>
+              <p className="body-text">{r.text}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="container-custom pt-4 pb-16 md:pt-6 md:pb-24">
-        <div className="bg-white border border-line rounded-[20px] md:rounded-[24px] p-6 md:p-10 flex flex-col lg:flex-row gap-6 lg:gap-10">
-          <div className="lg:flex-1 min-w-0">
-            <h2 className="text-2xl md:text-[28px] font-bold mb-3">Партнёры</h2>
-            <p className="text-base leading-relaxed text-muted">
-              Платформа работает вместе с государственными и платёжными институтами страны.
-            </p>
-          </div>
-          <dl className="lg:flex-[2] min-w-0 grid sm:grid-cols-2 gap-3 md:gap-4">
-            {partners.map((p) => (
-              <div key={p.name} className="p-[18px] rounded-2xl bg-paper">
-                <dt className="text-base font-bold">{p.name}</dt>
-                <dd className="mt-1 text-sm text-muted">{p.role}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+      <section className="panel" aria-labelledby="partners-title">
+        <p className="overtitle">Партнёры</p>
+        <h2 id="partners-title" className="title-sm mt-1.5">
+          Платформа работает вместе с государственными и платёжными институтами страны
+        </h2>
+        <dl className="kv mt-3">
+          {partners.map((p) => (
+            <div key={p.name} className="!flex-wrap !gap-x-3 !gap-y-0 py-2">
+              <dt className="font-medium text-ink">{p.name}</dt>
+              <dd className="text-body">{p.role}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
-    </>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import { IconMosque } from './icons';
+import { IconSearch } from './icons';
 
-/** Пустое состояние. icon — React-узел (иконка из ./icons); строка оставлена для совместимости. */
+/** Пустое состояние: белая панель, иконка в круге sec, заголовок и подсказка. */
 export default function EmptyState({
   icon,
   title,
@@ -11,12 +11,12 @@ export default function EmptyState({
   title: string;
   children?: ReactNode;
 }) {
-  const glyph = typeof icon === 'string' || icon === undefined ? <IconMosque size={28} /> : icon;
+  const glyph = typeof icon === 'string' || icon === undefined ? <IconSearch /> : icon;
   return (
-    <div className="card px-6 py-10 sm:p-12 text-center max-w-xl mx-auto flex flex-col items-center gap-3">
-      <span className="icon-tile mb-1">{glyph}</span>
-      <h2 className="text-xl font-bold">{title}</h2>
-      {children && <div className="text-[15px] leading-relaxed text-muted">{children}</div>}
+    <div className="panel-lg text-center flex flex-col items-center gap-2.5">
+      <span className="icon-round w-14 h-14">{glyph}</span>
+      <h2 className="title-sm">{title}</h2>
+      {children && <div className="body-text max-w-[420px]">{children}</div>}
     </div>
   );
 }

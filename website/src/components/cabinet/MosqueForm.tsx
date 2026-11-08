@@ -1,9 +1,10 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { IconLock } from '@/components/icons';
 import { ApiError, apiFetch, Mosque } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Alert, Field, FormCard } from './ui';
+import { Field, FormCard, FormError, StickyAction } from './ui';
 
 type Values = {
   name: string;
@@ -30,13 +31,6 @@ function initial(m?: Mosque): Values {
     longitude: m?.longitude != null ? String(m.longitude) : '',
   };
 }
-
-const IconLock = () => (
-  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="5" y="11" width="14" height="10" rx="2" />
-    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-  </svg>
-);
 
 export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSaved: (m: Mosque) => void }) {
   const { token } = useAuth();
@@ -80,20 +74,18 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
     }
   };
 
-  const input = 'input h-[52px]';
-
   return (
-    <form onSubmit={onSubmit} className="lg:flex-1 min-w-0 flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="min-w-0 flex flex-col gap-3">
       <FormCard as="fieldset" title="Основное">
         <Field id="m-name" label="Название мечети">
-          <input id="m-name" className={input} required value={v.name} onChange={set('name')} placeholder="Масҷиди Ҷомеъ" />
+          <input id="m-name" className="input" required value={v.name} onChange={set('name')} placeholder="Масҷиди Ҷомеъ" />
         </Field>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field id="m-city" label="Город">
-            <input id="m-city" className={input} required value={v.city} onChange={set('city')} placeholder="Душанбе" />
+            <input id="m-city" className="input" required value={v.city} onChange={set('city')} placeholder="Душанбе" />
           </Field>
           <Field id="m-address" label="Адрес">
-            <input id="m-address" className={input} required value={v.address} onChange={set('address')} />
+            <input id="m-address" className="input" required value={v.address} onChange={set('address')} />
           </Field>
         </div>
         <Field id="m-desc" label="О мечети" hint="Коротко: история, сколько прихожан, чем живёт община. Видят жертвователи.">
@@ -104,21 +96,21 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
       <FormCard as="fieldset" title="Имам и контакты">
         <div className="grid sm:grid-cols-2 gap-4">
           <Field id="m-imam" label="Имам">
-            <input id="m-imam" className={input} value={v.imam_name} onChange={set('imam_name')} />
+            <input id="m-imam" className="input" value={v.imam_name} onChange={set('imam_name')} />
           </Field>
           <Field
             id="m-imam-phone"
             label="Телефон имама"
             hint={
               <>
-                <IconLock />
+                <IconLock size={14} />
                 Видит только Комитет улемов
               </>
             }
           >
             <input
               id="m-imam-phone"
-              className={input}
+              className="input"
               type="tel"
               value={v.imam_phone}
               onChange={set('imam_phone')}
@@ -127,7 +119,7 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
           </Field>
         </div>
         <Field id="m-phone" label="Телефон мечети" hint="Публикуется на странице мечети.">
-          <input id="m-phone" className={input} type="tel" value={v.phone} onChange={set('phone')} placeholder="+992 …" />
+          <input id="m-phone" className="input" type="tel" value={v.phone} onChange={set('phone')} placeholder="+992 …" />
         </Field>
       </FormCard>
 
@@ -136,7 +128,7 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
           <Field id="m-lat" label="Широта">
             <input
               id="m-lat"
-              className={input}
+              className="input tabular"
               inputMode="decimal"
               value={v.latitude}
               onChange={set('latitude')}
@@ -146,7 +138,7 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
           <Field id="m-lng" label="Долгота">
             <input
               id="m-lng"
-              className={input}
+              className="input tabular"
               inputMode="decimal"
               value={v.longitude}
               onChange={set('longitude')}
@@ -156,17 +148,19 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
         </div>
       </FormCard>
 
-      {error && <Alert>{error}</Alert>}
+      {error && <FormError>{error}</FormError>}
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
-        <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
-          {busy ? 'Сохраняем…' : mosque ? 'Сохранить' : 'Отправить заявку'}
-        </button>
+      <div className="flex flex-col md:flex-row gap-3 md:items-center md:px-1">
         {!mosque && (
-          <p className="text-sm text-muted">
+          <p className="caption md:order-2 px-1 md:px-0">
             Комитет улемов проверит заявку. После одобрения вы сможете открывать сборы.
           </p>
         )}
+        <StickyAction>
+          <button type="submit" className="btn btn-primary btn-lg btn-block md:w-auto" disabled={busy}>
+            {busy ? 'Сохраняем…' : mosque ? 'Сохранить' : 'Отправить заявку'}
+          </button>
+        </StickyAction>
       </div>
     </form>
   );

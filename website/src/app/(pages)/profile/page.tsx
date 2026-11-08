@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import EmptyState from '@/components/EmptyState';
-import { IconMosque, IconSavob } from '@/components/icons';
-import { ApiError, apiFetch, formatDate, formatTJS, initials, Transaction } from '@/lib/api';
+import { IconHandHeart, IconLogout, IconMosque, IconSavob, IconSparkles } from '@/components/icons';
+import { ApiError, apiFetch, formatDate, formatMoney, initials, Transaction } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 type Savob = { total_points: number; current_multiplier: number; current_event: string };
@@ -66,46 +65,27 @@ export default function ProfilePage() {
   const completed = donations?.filter((d) => d.status === 'completed') ?? [];
   const total = completed.reduce((sum, d) => sum + d.amount, 0);
   const mosquesHelped = new Set(completed.map((d) => d.campaign?.mosque_id).filter(Boolean)).size;
-  const shown =
-    donations?.filter((d) => filter === 'all' || d.campaign?.status === filter) ?? [];
+  const shown = donations?.filter((d) => filter === 'all' || d.campaign?.status === filter) ?? [];
 
   const stats = [
-    { label: 'Пожертвовано', value: donations ? formatTJS(total) : '…' },
+    { label: 'Пожертвовано', value: donations ? formatMoney(total) : '…', wide: true },
     { label: 'Добрых дел', value: donations ? String(completed.length) : '…' },
-    { label: 'Мечетей поддержано', value: donations ? String(mosquesHelped) : '…', wide: true },
+    { label: 'Мечетей', value: donations ? String(mosquesHelped) : '…' },
   ];
 
   return (
-    <div className="container-custom pt-5 pb-16 sm:pt-12 sm:pb-24 flex flex-col gap-4 sm:gap-8">
-      <header className="flex flex-wrap items-center gap-3.5 sm:gap-5">
+    <div className="page flex flex-col gap-3 md:gap-4">
+      <header className="flex items-center gap-3 px-1">
         <span
           aria-hidden="true"
-          className="w-[52px] h-[52px] sm:w-[72px] sm:h-[72px] rounded-2xl sm:rounded-[22px] bg-sand text-brass-700 flex items-center justify-center text-lg sm:text-[26px] font-bold shrink-0"
+          className="w-12 h-12 rounded-full bg-white text-sec flex items-center justify-center text-base font-semibold shrink-0"
         >
           {initials(user.full_name)}
         </span>
-        <div className="flex-1 min-w-0 basis-[200px]">
-          <p className="text-sm sm:text-base text-muted">Ассалому алайкум,</p>
-          <h1 className="text-xl sm:text-[36px] sm:leading-tight font-bold break-words" style={{ letterSpacing: '-0.02em' }}>
-            {user.full_name}
-          </h1>
-          <p className="text-sm text-muted mt-0.5">{user.phone_number}</p>
-        </div>
-        <div className="flex gap-2.5 w-full sm:w-auto">
-          <Link href="/cabinet" className="btn btn-outline flex-1 sm:flex-none text-primary-700">
-            <IconMosque size={18} />
-            Кабинет мечети
-          </Link>
-          <button
-            type="button"
-            className="btn bg-dark-100 text-ink hover:bg-dark-200"
-            onClick={() => {
-              logout();
-              router.replace('/');
-            }}
-          >
-            Выйти
-          </button>
+        <div className="min-w-0">
+          <p className="caption !text-[13px]">Ассалому алайкум,</p>
+          <h1 className="title break-words">{user.full_name}</h1>
+          <p className="caption tabular">{user.phone_number}</p>
         </div>
       </header>
 
@@ -115,104 +95,135 @@ export default function ProfilePage() {
         </p>
       )}
 
-      <section aria-label="Итоги" className="flex flex-col lg:flex-row gap-2.5 sm:gap-5">
-        <div className="girih relative overflow-hidden lg:flex-[2] min-w-0 rounded-[22px] sm:rounded-[24px] bg-brass-700 text-brass-50 p-6 sm:p-8 flex flex-col gap-2.5 sm:gap-[18px] [--girih-opacity:0.16]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-semibold text-gold">
-              Мой Савоб <span className="hidden sm:inline">· <span lang="ar">ثواب</span></span>
+      <div className="layout-aside">
+        <section className="panel min-w-0 order-2 lg:order-1" aria-labelledby="history-title">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 id="history-title" className="title-sm">
+              Мои добрые дела
             </h2>
-            <IconSavob size={28} strokeWidth={1.6} className="text-gold hidden sm:block" />
+            {donations && donations.length > 0 && (
+              <div role="group" aria-label="Фильтр по статусу сбора" className="flex flex-wrap gap-1.5">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={filter === f.id}
+                    onClick={() => setFilter(f.id)}
+                    className="chip min-h-[44px] sm:min-h-[36px]"
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-[56px] sm:text-[72px] leading-none font-bold" style={{ letterSpacing: '-0.03em' }}>
-            {savob ? savobFmt.format(savob.total_points) : '…'}
-          </p>
-          <p className="text-sm sm:text-base leading-relaxed text-brass-100/90 max-w-[460px]">
-            Баллы духовной награды, без денежной ценности.
-          </p>
-          {savob && savob.current_multiplier > 1 && (
-            <p className="self-start inline-flex items-center gap-2 rounded-full bg-gold text-brass-900 px-3 py-1.5 text-sm font-semibold">
-              <IconSavob size={16} />
-              Сейчас {EVENT_LABELS[savob.current_event] ?? 'праздник'}: Савоб ×{savob.current_multiplier}
-            </p>
-          )}
-        </div>
-        <div className="lg:flex-1 min-w-0 grid grid-cols-2 lg:grid-cols-1 gap-2.5 sm:gap-3">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className={`bg-white border border-line rounded-2xl sm:rounded-[18px] p-4 sm:p-5 ${s.wide ? 'col-span-2 lg:col-span-1' : ''}`}
-            >
-              <p className="text-[13px] sm:text-sm text-muted">{s.label}</p>
-              <p className="mt-1 text-xl sm:text-[26px] font-bold">{s.value}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="mt-2 sm:mt-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-          <h2 className="text-xl sm:text-[28px] font-bold">Мои добрые дела</h2>
-          {donations && donations.length > 0 && (
-            <div role="group" aria-label="Фильтр по статусу сбора" className="segmented max-w-full overflow-x-auto">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  aria-pressed={filter === f.id}
-                  onClick={() => setFilter(f.id)}
-                  className="!h-11 sm:!h-10 !px-3.5 !text-sm whitespace-nowrap"
-                >
-                  {f.label}
-                </button>
+          <div className="mt-2">
+            {donations === null ? (
+              error ? null : (
+                <div className="flex flex-col gap-2 py-2" aria-hidden="true">
+                  <div className="skeleton h-14" />
+                  <div className="skeleton h-14" />
+                  <div className="skeleton h-14" />
+                </div>
+              )
+            ) : donations.length === 0 ? (
+              <div className="py-6 text-center flex flex-col items-center gap-2">
+                <span className="icon-round w-14 h-14">
+                  <IconSavob size={24} />
+                </span>
+                <p className="title-sm">Пока нет пожертвований</p>
+                <p className="body-text max-w-[360px]">
+                  Выберите сбор — после пожертвования здесь появится история и Савоб.
+                </p>
+                <Link href="/campaigns" className="btn btn-primary mt-2">
+                  Выбрать сбор
+                </Link>
+              </div>
+            ) : shown.length === 0 ? (
+              <p className="body-text py-6 text-center">Нет пожертвований с таким статусом сбора.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {shown.map((d) => {
+                  const st = rowStatus(d);
+                  return (
+                    <li key={d.id} className="group relative flex items-center gap-3 min-h-[72px] py-2.5">
+                      <span className="icon-tile" aria-hidden="true">
+                        <IconHandHeart />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {/* Ссылка растянута на всю строку — цель нажатия 72 px */}
+                        <Link
+                          href={`/campaigns/${d.campaign_id}`}
+                          className="block truncate text-sm leading-5 font-medium text-ink group-hover:text-accent-700 after:absolute after:inset-0 after:content-['']"
+                        >
+                          {d.campaign?.title ?? 'Сбор'}
+                        </Link>
+                        <p className="caption">
+                          {formatDate(d.created_at)}
+                          {d.status === 'completed' && (
+                            <span className="text-sec font-medium"> · +{d.savob_earned} Савоб</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[15px] leading-[21px] font-semibold text-ink tabular whitespace-nowrap">
+                          {formatMoney(d.amount)}
+                        </span>
+                        {st && <span className={`badge ${st.cls}`}>{st.label}</span>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <aside className="aside-sticky flex flex-col gap-3 order-1 lg:order-2">
+          <section className="panel" aria-labelledby="savob-title">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="savob-title" className="overtitle">
+                Мой Савоб · <span lang="ar">ثواب</span>
+              </h2>
+              <IconSparkles size={20} className="text-sec" />
+            </div>
+            <p className="num-lg mt-2 text-ink">{savob ? savobFmt.format(savob.total_points) : '…'}</p>
+            <p className="caption mt-0.5">Баллы духовной награды, без денежной ценности.</p>
+            {savob && savob.current_multiplier > 1 && (
+              <p className="mt-3 rounded-xl bg-accent-100 px-3 py-2.5 text-[13px] leading-[18px] font-medium text-accent-700">
+                Сейчас {EVENT_LABELS[savob.current_event] ?? 'праздник'}: Савоб ×{savob.current_multiplier}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              {stats.map((s) => (
+                <div key={s.label} className={`tile !py-3 ${s.wide ? 'col-span-2' : ''}`}>
+                  <p className="text-xs leading-[17px] text-body">{s.label}</p>
+                  <p className="text-lg leading-6 font-semibold text-ink tabular whitespace-nowrap">{s.value}</p>
+                </div>
               ))}
             </div>
-          )}
-        </div>
+          </section>
 
-        {donations === null ? (
-          error ? null : <div className="h-40 rounded-[20px] bg-dark-100 animate-pulse" aria-hidden="true" />
-        ) : donations.length === 0 ? (
-          <EmptyState icon={<IconSavob size={28} />} title="Пока нет пожертвований">
-            <p>Выберите сбор — после пожертвования здесь появится история и Савоб.</p>
-            <Link href="/campaigns" className="btn btn-primary mt-4">
-              Выбрать сбор
+          <section className="panel flex flex-col gap-2">
+            <Link href="/cabinet" className="btn btn-secondary btn-block">
+              <IconMosque size={18} />
+              Кабинет мечети
             </Link>
-          </EmptyState>
-        ) : shown.length === 0 ? (
-          <p className="card p-6 text-muted">Нет пожертвований с таким статусом сбора.</p>
-        ) : (
-          <ul className="bg-white border border-line rounded-[18px] sm:rounded-[20px] overflow-hidden divide-y divide-dark-100">
-            {shown.map((d) => {
-              const st = rowStatus(d);
-              return (
-                <li key={d.id} className="flex items-center gap-3 sm:gap-5 px-4 py-3.5 sm:px-6 sm:py-[18px]">
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/campaigns/${d.campaign_id}`}
-                      className="block truncate text-[15px] sm:text-base font-semibold text-ink hover:text-primary-600"
-                    >
-                      {d.campaign?.title ?? 'Сбор'}
-                    </Link>
-                    <p className="mt-0.5 text-[13px] sm:text-sm text-muted">
-                      {formatDate(d.created_at)}
-                      {st && <span className="sm:hidden"> · {st.label.toLowerCase()}</span>}
-                    </p>
-                  </div>
-                  {st && <span className={`badge ${st.cls} hidden sm:inline-flex`}>{st.label}</span>}
-                  <div className="text-right shrink-0 sm:flex sm:items-center sm:gap-5">
-                    <p className="text-[15px] sm:text-[17px] font-bold sm:min-w-[110px]">{formatTJS(d.amount)}</p>
-                    {d.status === 'completed' && (
-                      <p className="mt-0.5 sm:mt-0 text-[13px] font-semibold text-brass-700 sm:inline-flex sm:items-center sm:justify-center sm:gap-1.5 sm:min-w-[104px] sm:rounded-full sm:bg-sand sm:px-2.5 sm:py-1.5 sm:text-sm sm:font-bold sm:text-brass-800">
-                        +{d.savob_earned} Савоб
-                      </p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+            <button
+              type="button"
+              className="btn btn-secondary btn-block"
+              onClick={() => {
+                logout();
+                router.replace('/');
+              }}
+            >
+              <IconLogout size={18} />
+              Выйти
+            </button>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -2,10 +2,10 @@
 
 import { notFound, useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { Alert, CabinetPage, Field, FormCard, Loading } from '@/components/cabinet/ui';
+import { Alert, CabinetPage, Field, FormCard, FormError, Loading, StickyAction } from '@/components/cabinet/ui';
 import { useMosqueCabinet } from '@/components/cabinet/useMosqueCabinet';
 import { IconClose, IconPlus } from '@/components/icons';
-import { ApiError, apiFetch, Campaign, formatTJS, Report } from '@/lib/api';
+import { ApiError, apiFetch, Campaign, formatMoney, Report } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isEnded } from '@/lib/cabinet';
 
@@ -20,7 +20,6 @@ export default function ReportPage({ params }: { params: { id: string; cid: stri
 
   return (
     <CabinetPage
-      wide
       title={campaign ? `Отчёт: ${campaign.title}` : 'Отчёт'}
       description="Отчёт увидят все жертвователи. Это главный механизм доверия Садаки."
       crumbs={[
@@ -44,12 +43,11 @@ export default function ReportPage({ params }: { params: { id: string; cid: stri
 
 type Row = { item: string; cost: string };
 
-/** Пунктирная кнопка «добавить». */
+/** Пунктирная кнопка «добавить» из макета: белая, рамка 1.5px dashed, текст #B34A12. */
 const ADD_BTN =
-  'inline-flex items-center gap-2 h-11 px-3.5 rounded-[10px] border border-dashed border-[#B9B1A2] bg-[#FBFAF7] text-[15px] font-semibold text-ink hover:border-primary-400 transition-colors';
+  'w-full inline-flex items-center justify-center gap-2 min-h-[52px] px-4 rounded-tile border-[1.5px] border-dashed border-[#C6D6D5] bg-white text-sm font-semibold text-accent-700 hover:bg-accent-100 transition-colors';
 
-const DEL_BTN =
-  'w-11 h-11 shrink-0 rounded-[10px] flex items-center justify-center text-muted hover:bg-dark-100 hover:text-ink disabled:opacity-40 disabled:pointer-events-none';
+const DEL_BTN = 'btn-icon disabled:opacity-40 disabled:pointer-events-none';
 
 function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous?: Report; back: string }) {
   const router = useRouter();
@@ -96,20 +94,20 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       {previous?.status === 'rejected' && (
         <Alert title="Комитет отклонил прошлый отчёт.">
           {previous.moderation_note ? `«${previous.moderation_note}». ` : ''}Исправьте и отправьте снова.
         </Alert>
       )}
 
-      <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-7">
-        <form onSubmit={onSubmit} className="lg:flex-1 min-w-0 flex flex-col gap-5">
-          <FormCard>
+      <div className="layout-aside">
+        <form id="report-form" onSubmit={onSubmit} className="min-w-0 flex flex-col gap-3">
+          <FormCard title="Что сделано">
             <Field id="r-title" label="Заголовок">
-              <input id="r-title" className="input h-[52px]" required value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input id="r-title" className="input" required value={title} onChange={(e) => setTitle(e.target.value)} />
             </Field>
-            <Field id="r-desc" label="Что сделано" hint="Опишите, что купили или отремонтировали и какой результат.">
+            <Field id="r-desc" label="Описание" hint="Опишите, что купили или отремонтировали и какой результат.">
               <textarea
                 id="r-desc"
                 className="input resize-y"
@@ -125,29 +123,29 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
             <div className="flex flex-col gap-2.5">
               <div
                 aria-hidden="true"
-                className="hidden sm:grid grid-cols-[minmax(0,1fr)_160px_44px] gap-2.5 px-0.5 text-[13px] font-semibold text-muted"
+                className="hidden sm:grid grid-cols-[minmax(0,1fr)_160px_44px] gap-2 px-0.5 caption"
               >
                 <span>Статья</span>
-                <span>Сумма, TJS</span>
+                <span>Сумма, сомони</span>
                 <span />
               </div>
               {rows.map((r, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-[minmax(0,1fr)_44px] sm:grid-cols-[minmax(0,1fr)_160px_44px] gap-2 sm:gap-2.5 items-center pb-3 sm:pb-0 border-b border-dark-100 sm:border-0 last:border-0 last:pb-0"
+                  className="grid grid-cols-[minmax(0,1fr)_44px] sm:grid-cols-[minmax(0,1fr)_160px_44px] gap-2 items-center pb-3 sm:pb-0 border-b border-line sm:border-0 last:border-0 last:pb-0"
                 >
                   <input
                     aria-label={`Статья расходов ${i + 1}`}
-                    className="input col-span-2 sm:col-span-1 text-[15px]"
+                    className="input col-span-2 sm:col-span-1"
                     placeholder="Шифер, 40 листов"
                     value={r.item}
                     onChange={(e) => updateRow(i, { item: e.target.value })}
                   />
                   <input
-                    aria-label={`Сумма ${i + 1}, TJS`}
-                    className="input text-[15px] font-semibold sm:text-right"
+                    aria-label={`Сумма ${i + 1}, сомони`}
+                    className="input font-semibold tabular sm:text-right"
                     inputMode="decimal"
-                    placeholder="Сумма, TJS"
+                    placeholder="Сумма, с."
                     value={r.cost}
                     onChange={(e) => updateRow(i, { cost: e.target.value.replace(/[^\d.,\s]/g, '') })}
                   />
@@ -163,12 +161,10 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
                 </div>
               ))}
             </div>
-            <div>
-              <button type="button" className={ADD_BTN} onClick={() => setRows((rs) => [...rs, { item: '', cost: '' }])}>
-                <IconPlus size={16} />
-                Статья расходов
-              </button>
-            </div>
+            <button type="button" className={ADD_BTN} onClick={() => setRows((rs) => [...rs, { item: '', cost: '' }])}>
+              <IconPlus size={16} />
+              Статья расходов
+            </button>
           </FormCard>
 
           <FormCard
@@ -176,12 +172,12 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
             title="Фото чеков и работ"
             description="Ссылки на фото чеков и результата работ — минимум одна, лучше чек на каждую крупную статью. Загрузка файлов прямо на сайт появится позже."
           >
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               {photos.map((p, i) => (
                 <div key={i} className="flex gap-2 items-center">
                   <input
                     aria-label={`Ссылка на фото ${i + 1}`}
-                    className="input text-[15px]"
+                    className="input"
                     type="url"
                     inputMode="url"
                     placeholder="https://…"
@@ -200,54 +196,59 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
                 </div>
               ))}
             </div>
-            <div>
-              <button type="button" className={ADD_BTN} onClick={() => setPhotos((ps) => [...ps, ''])}>
-                <IconPlus size={16} />
-                Ещё фото
-              </button>
-            </div>
-          </FormCard>
-
-          {error && <Alert>{error}</Alert>}
-
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
-              {busy ? 'Публикуем…' : 'Опубликовать отчёт'}
+            <button type="button" className={ADD_BTN} onClick={() => setPhotos((ps) => [...ps, ''])}>
+              <IconPlus size={16} />
+              Ещё фото
             </button>
-            <p className="text-sm text-muted">Отчёт отправится Комитету улемов на проверку.</p>
-          </div>
+          </FormCard>
         </form>
 
-        <aside
-          aria-labelledby="report-total"
-          className="lg:w-[340px] shrink-0 min-w-0 bg-white border border-line rounded-[20px] sm:rounded-[22px] p-5 sm:p-6 flex flex-col gap-3.5 lg:sticky lg:top-24"
-        >
-          <h2 id="report-total" className="text-lg font-bold">
-            Итог
-          </h2>
-          <dl className="flex flex-col gap-3 text-base">
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Собрано</dt>
-              <dd className="font-semibold text-right">{formatTJS(campaign.current_amount)}</dd>
+        <aside aria-labelledby="report-total" className="aside-sticky min-w-0 flex flex-col gap-3">
+          <section className="panel">
+            <h2 id="report-total" className="overtitle">
+              Итог
+            </h2>
+            <dl className="mt-2 text-sm leading-5 tabular">
+              <div className="flex justify-between gap-3 min-h-[32px] items-center">
+                <dt className="text-body">Собрано</dt>
+                <dd className="font-medium text-ink text-right whitespace-nowrap">{formatMoney(campaign.current_amount)}</dd>
+              </div>
+              <div className="flex justify-between gap-3 min-h-[32px] items-center">
+                <dt className="text-body">Пожертвований</dt>
+                <dd className="font-medium text-ink text-right">{campaign.donation_count}</dd>
+              </div>
+              <div className="flex justify-between gap-3 min-h-[32px] items-center">
+                <dt className="text-body">Потрачено</dt>
+                <dd className="font-medium text-ink text-right whitespace-nowrap">{formatMoney(spent)}</dd>
+              </div>
+              <div className="divider my-2" />
+              <div className="flex justify-between gap-3 items-baseline" aria-live="polite">
+                <dt className="title-sm">Остаток</dt>
+                <dd className={`num-lg text-right whitespace-nowrap ${rest < 0 ? 'text-[#B42318]' : 'text-ink'}`}>
+                  {formatMoney(rest)}
+                </dd>
+              </div>
+            </dl>
+            <p className={`mt-3 ${rest < 0 ? 'alert-error' : 'alert bg-app text-body'}`}>
+              {rest < 0
+                ? 'Расходы больше, чем собрано. Проверьте суммы или объясните разницу в описании.'
+                : 'Объясните остаток в описании — например, «передан на следующий сбор».'}
+            </p>
+
+            {error && (
+              <div className="mt-3">
+                <FormError>{error}</FormError>
+              </div>
+            )}
+            <div className="mt-4">
+              <StickyAction>
+                <button type="submit" form="report-form" className="btn btn-primary btn-lg btn-block" disabled={busy}>
+                  {busy ? 'Публикуем…' : 'Опубликовать отчёт'}
+                </button>
+              </StickyAction>
             </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Пожертвований</dt>
-              <dd className="font-semibold text-right">{campaign.donation_count}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Потрачено</dt>
-              <dd className="font-semibold text-right">{formatTJS(spent)}</dd>
-            </div>
-            <div className="flex justify-between gap-3 pt-3 border-t border-dark-100" aria-live="polite">
-              <dt className="font-semibold">Остаток</dt>
-              <dd className={`font-bold text-right ${rest < 0 ? 'text-red-700' : 'text-primary-600'}`}>{formatTJS(rest)}</dd>
-            </div>
-          </dl>
-          <p className={`rounded-xl px-3.5 py-3 text-sm leading-normal ${rest < 0 ? 'bg-red-50 text-red-800' : 'bg-paper text-dark-700'}`}>
-            {rest < 0
-              ? 'Расходы больше, чем собрано. Проверьте суммы или объясните разницу в описании.'
-              : 'Объясните остаток в описании — например, «передан на следующий сбор».'}
-          </p>
+            <p className="caption mt-2 text-center md:text-left">Отчёт отправится Комитету улемов на проверку.</p>
+          </section>
         </aside>
       </div>
     </div>

@@ -2,17 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode, useEffect } from 'react';
-import { LogoMark } from '@/components/Logo';
-import { IconLogout } from '@/components/icons';
+import { ComponentType, ReactNode, useEffect } from 'react';
+import Logo from '@/components/Logo';
+import { IconHandHeart, IconHome, IconLandmark, IconLogout, IconReport } from '@/components/icons';
 import { AdminAuthProvider, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
 import { AdminStats, AdminStatsProvider, useAdminStats } from './AdminStats';
 
-const NAV: { href: string; label: string; count?: (s: AdminStats) => number }[] = [
-  { href: '/admin', label: 'Сводка' },
-  { href: '/admin/mosques', label: 'Мечети', count: (s) => s.mosques_pending },
-  { href: '/admin/campaigns', label: 'Кампании', count: (s) => s.campaigns_pending },
-  { href: '/admin/reports', label: 'Отчёты', count: (s) => s.reports_pending },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ size?: number }>;
+  count?: (s: AdminStats) => number;
+};
+
+const NAV: NavItem[] = [
+  { href: '/admin', label: 'Сводка', icon: IconHome },
+  { href: '/admin/mosques', label: 'Мечети', icon: IconLandmark, count: (s) => s.mosques_pending },
+  { href: '/admin/campaigns', label: 'Кампании', icon: IconHandHeart, count: (s) => s.campaigns_pending },
+  { href: '/admin/reports', label: 'Отчёты', icon: IconReport, count: (s) => s.reports_pending },
 ];
 
 export default function AdminShell({ children }: { children: ReactNode }) {
@@ -34,48 +41,76 @@ function Guard({ children }: { children: ReactNode }) {
   }, [ready, admin, isLogin, router]);
 
   if (isLogin) return <>{children}</>;
-  if (!ready || !admin) return <div className="min-h-screen bg-[#F2F0EA]" aria-busy="true" />;
+  if (!ready || !admin) return <div className="min-h-screen bg-app" aria-busy="true" />;
 
   return (
     <AdminStatsProvider>
-      <div className="min-h-screen bg-[#F2F0EA] text-ink">
+      <div className="min-h-screen bg-app text-ink">
         <TopBar />
-        <AdminNav />
-        <main className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-7 pb-16 sm:pt-9 sm:pb-[72px]">{children}</main>
+        <main className="page">{children}</main>
+        <TabBar />
       </div>
     </AdminStatsProvider>
   );
 }
 
+function useNav() {
+  const pathname = usePathname();
+  const { stats } = useAdminStats();
+  return NAV.map((n) => ({
+    ...n,
+    active: n.href === '/admin' ? pathname === '/admin' : pathname.startsWith(n.href),
+    pending: stats && n.count ? n.count(stats) : 0,
+  }));
+}
+
+/** Белая шапка 64px как в 9c: логотип, сегментированное меню, справа — сотрудник и «Выйти». */
 function TopBar() {
   const { admin, logout } = useAdmin();
   const router = useRouter();
+  const nav = useNav();
   if (!admin) return null;
 
   return (
-    <header className="surface-night">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-8 min-h-[64px] py-2 flex items-center justify-between gap-3">
-        <Link href="/admin" className="inline-flex items-center gap-2.5 text-paper hover:text-paper min-w-0">
-          <LogoMark size={30} onDark />
-          <span className="flex flex-col leading-[1.15] min-w-0">
-            <strong className="text-[17px] font-bold">Комитет улемов</strong>
-            <span className="text-xs text-[#9FB0AC]">Садака · панель надзора</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-3.5 text-sm shrink-0">
-          <span className="hidden sm:inline text-mist">
-            <span className="hidden md:inline">{admin.full_name} · </span>
-            <span className="text-gold">{ROLE_LABELS[admin.role]}</span>
-          </span>
+    <header className="bg-white lg:sticky lg:top-0 z-40">
+      <div className="container-custom h-16 flex items-center justify-between gap-3">
+        <div className="min-w-0 shrink">
+          <Logo href="/admin" subtitle="Панель Комитета улемов" />
+        </div>
+
+        <nav aria-label="Разделы" className="segmented hidden lg:flex">
+          {nav.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              aria-current={n.active ? 'page' : undefined}
+              className="flex-none gap-2 px-[18px] hover:text-accent-700"
+            >
+              {n.label}
+              {n.pending > 0 && (
+                <span className="badge badge-warning min-w-[24px] justify-center tabular">
+                  {n.pending}
+                  <span className="sr-only"> ждут решения</span>
+                </span>
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden md:flex flex-col items-end text-right">
+            <span className="text-sm leading-5 font-medium text-ink max-w-[200px] truncate">{admin.full_name}</span>
+            <span className="caption">{ROLE_LABELS[admin.role]}</span>
+          </div>
           <button
             type="button"
-            className="btn btn-on-dark btn-sm h-11 sm:h-10 px-3.5"
+            className="btn btn-secondary min-h-[44px] px-4 md:px-[18px]"
             onClick={() => {
               logout();
               router.replace('/admin/login');
             }}
           >
-            <IconLogout size={18} className="sm:hidden" />
+            <IconLogout size={18} />
             Выйти
           </button>
         </div>
@@ -84,38 +119,42 @@ function TopBar() {
   );
 }
 
-function AdminNav() {
-  const pathname = usePathname();
-  const { stats } = useAdminStats();
-
+/** Нижняя панель вкладок на телефоне и планшете (как таббар мобильного макета). */
+function TabBar() {
+  const nav = useNav();
   return (
-    <nav aria-label="Разделы" className="sticky top-0 z-40 bg-white border-b border-line">
-      <div className="max-w-[1200px] mx-auto px-2 sm:px-8 flex gap-1 overflow-x-auto [scrollbar-width:none]">
-        {NAV.map((n) => {
-          const active = n.href === '/admin' ? pathname === '/admin' : pathname.startsWith(n.href);
-          const count = stats && n.count ? n.count(stats) : 0;
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              aria-current={active ? 'page' : undefined}
-              className={`inline-flex items-center gap-2 h-12 px-3 sm:px-3.5 text-[15px] whitespace-nowrap border-b-2 transition-colors focus-visible:outline-offset-[-2px] ${
-                active
-                  ? 'border-primary-600 text-primary-700 font-bold'
-                  : 'border-transparent text-dark-700 font-medium hover:text-primary-700'
+    <nav
+      aria-label="Разделы"
+      className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white flex px-2 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))]"
+    >
+      {nav.map((n) => {
+        const Icon = n.icon;
+        return (
+          <Link
+            key={n.href}
+            href={n.href}
+            aria-current={n.active ? 'page' : undefined}
+            className={`flex-1 min-w-0 min-h-[52px] flex flex-col items-center justify-center gap-[3px] ${
+              n.active ? 'text-accent-700 hover:text-accent-700' : 'text-muted hover:text-ink'
+            }`}
+          >
+            <span
+              className={`relative w-[52px] h-[30px] rounded-full flex items-center justify-center ${
+                n.active ? 'bg-accent-100' : ''
               }`}
             >
-              {n.label}
-              {count > 0 && (
-                <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#FBF1DC] text-[#7A4B00] text-xs font-bold inline-flex items-center justify-center">
-                  {count}
+              <Icon size={20} />
+              {n.pending > 0 && (
+                <span className="absolute -top-1 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FDF0DC] text-[#A35A00] text-[11px] leading-[18px] font-semibold text-center tabular">
+                  {n.pending}
                   <span className="sr-only"> ждут решения</span>
                 </span>
               )}
-            </Link>
-          );
-        })}
-      </div>
+            </span>
+            <span className="text-[11px] leading-[15px] font-medium truncate max-w-full">{n.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

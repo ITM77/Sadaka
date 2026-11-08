@@ -11,26 +11,25 @@ export default function NewMosquePage() {
   const router = useRouter();
   return (
     <CabinetPage
-      wide
       title="Заявка на регистрацию мечети"
       crumbs={[{ href: '/cabinet', label: 'Кабинет' }]}
       current="Заявка"
     >
-      <ol aria-label="Этапы" className="-mt-2 mb-6 sm:mb-8 flex flex-wrap gap-2">
+      <ol aria-label="Этапы" className="flex flex-wrap gap-1.5">
         {STAGES.map((s, i) => {
           const on = i === 0;
           return (
             <li
               key={s}
               aria-current={on ? 'step' : undefined}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-full text-[15px] font-semibold ${
-                on ? 'bg-primary-600 text-white' : 'bg-white border border-line text-muted'
+              className={`inline-flex items-center gap-2 min-h-[36px] pl-1.5 pr-3.5 rounded-full bg-white text-[13px] leading-[18px] font-medium ${
+                on ? 'text-ink' : 'text-muted'
               }`}
             >
               <span
                 aria-hidden="true"
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[13px] ${
-                  on ? 'bg-white text-primary-600' : 'bg-paper'
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold tabular ${
+                  on ? 'bg-accent-100 text-accent-700' : 'bg-app text-muted'
                 }`}
               >
                 {i + 1}
@@ -40,7 +39,7 @@ export default function NewMosquePage() {
           );
         })}
       </ol>
-      <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-7">
+      <div className="layout-aside">
         <MosqueForm onSaved={(m) => router.replace(`/cabinet/mosques/${m.id}`)} />
         <MosqueChecklist />
       </div>

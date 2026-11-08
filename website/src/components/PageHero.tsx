@@ -1,31 +1,34 @@
 import type { ReactNode } from 'react';
 
 interface PageHeroProps {
-  /** Надпись латунью над заголовком */
+  /** overtitle (sec, верхний регистр) или «хлебные крошки» над заголовком */
   badge?: string;
   title: ReactNode;
   description?: ReactNode;
-  /** Кнопки, поиск или фильтры под описанием */
+  /** Поиск, фильтры или кнопки под описанием */
   children?: ReactNode;
-  /** night — ночной фон с орнаментом (по умолчанию), light — светлый фон страницы */
-  tone?: 'night' | 'light';
+  /** panel — белая панель (по умолчанию), plain — заголовок прямо на фоне приложения */
+  tone?: 'panel' | 'plain' | 'night' | 'light';
 }
 
-/** Шапка внутренних страниц в стиле «Лазурит и латунь». */
-export default function PageHero({ badge, title, description, children, tone = 'night' }: PageHeroProps) {
-  const night = tone === 'night';
+/** Заголовок страницы «Стиля 2»: 24/30 semibold, подпись 14/20 #515B6B. */
+export default function PageHero({ badge, title, description, children, tone = 'panel' }: PageHeroProps) {
+  const inPanel = tone === 'panel' || tone === 'night';
+  const body = (
+    <>
+      {badge && <p className={inPanel ? 'overtitle' : 'caption !text-[13px]'}>{badge}</p>}
+      <h1 className="title">{title}</h1>
+      {description && <p className="body-text max-w-[680px]">{description}</p>}
+      {children && <div className="mt-3">{children}</div>}
+    </>
+  );
   return (
-    <section className={night ? 'girih surface-night' : 'bg-paper'}>
-      <div className="container-custom pt-10 pb-12 md:pt-16 md:pb-20 flex flex-col gap-4 md:gap-5 max-w-[1200px]">
-        {badge && <p className={`eyebrow ${night ? 'text-gold' : ''}`}>{badge}</p>}
-        <h1 className="h-page max-w-[820px]">{title}</h1>
-        {description && (
-          <p className={`text-[17px] md:text-xl leading-relaxed max-w-[680px] ${night ? 'text-mist' : 'text-muted'}`}>
-            {description}
-          </p>
-        )}
-        {children && <div className="mt-2 md:mt-3">{children}</div>}
-      </div>
-    </section>
+    <div className="container-custom pt-4 md:pt-7">
+      {inPanel ? (
+        <section className="panel-lg flex flex-col gap-1.5">{body}</section>
+      ) : (
+        <section className="flex flex-col gap-1.5">{body}</section>
+      )}
+    </div>
   );
 }

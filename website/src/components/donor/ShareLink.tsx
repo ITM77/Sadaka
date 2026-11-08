@@ -84,7 +84,7 @@ export function QrLink({ path }: { path: string }) {
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="input h-12 text-sm font-medium text-dark-700 bg-paper"
+        className="input text-sm font-medium text-body"
       />
       <button
         type="button"

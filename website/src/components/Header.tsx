@@ -2,18 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { initials } from '@/lib/api';
 import Logo from './Logo';
-import { IconChevronRight, IconClose, IconMenu } from './icons';
+import { IconHeart, IconHome, IconLandmark, IconUser } from './icons';
 
+/** Веб: сегментированное меню-пилюля в белой шапке 64px. */
 const NAV = [
   { href: '/', label: 'Главная' },
-  { href: '/campaigns', label: 'Сборы' },
   { href: '/mosques', label: 'Мечети' },
+  { href: '/campaigns', label: 'Сборы' },
   { href: '/about', label: 'О проекте' },
-  { href: '/contact', label: 'Контакты' },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -23,119 +21,84 @@ function isActive(pathname: string, href: string) {
 export default function Header() {
   const pathname = usePathname() ?? '/';
   const { user, ready } = useAuth();
-  const [open, setOpen] = useState(false);
   const signedIn = ready && !!user;
 
-  // Закрываем меню при переходе и по Escape
-  useEffect(() => setOpen(false), [pathname]);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  const tabs = [
+    { href: '/', label: 'Главная', icon: IconHome, active: pathname === '/' },
+    { href: '/mosques', label: 'Мечети', icon: IconLandmark, active: isActive(pathname, '/mosques') },
+    { href: '/campaigns', label: 'Сборы', icon: IconHeart, active: isActive(pathname, '/campaigns') },
+    {
+      href: signedIn ? '/profile' : '/login',
+      label: signedIn ? 'Профиль' : 'Войти',
+      icon: IconUser,
+      active: ['/profile', '/login', '/register', '/cabinet'].some((p) => isActive(pathname, p)),
+    },
+  ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-line">
-      <div className="container-custom flex items-center gap-2 md:gap-8 min-h-16 md:min-h-20 pr-3 sm:pr-8">
-        <div className="mr-auto">
+    <>
+      <header className="sticky top-0 z-40 bg-white">
+        <div className="max-w-[1240px] mx-auto h-14 lg:h-16 px-4 lg:px-8 flex items-center justify-between gap-4">
           <Logo />
-        </div>
 
-        <nav aria-label="Основное меню" className="hidden lg:flex items-center gap-1 flex-1">
-          {NAV.map((n) => {
-            const active = isActive(pathname, n.href);
-            return (
+          <nav aria-label="Основное меню" className="hidden lg:flex segmented !flex-none">
+            {NAV.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
-                aria-current={active ? 'page' : undefined}
-                className={`inline-flex items-center h-11 px-3.5 rounded-[10px] text-[15px] transition-colors ${
-                  active
-                    ? 'bg-mint text-primary-700 font-semibold'
-                    : 'text-dark-700 font-medium hover:bg-paper hover:text-ink'
-                }`}
+                aria-current={isActive(pathname, n.href) ? 'page' : undefined}
+                className="!px-[18px] hover:text-accent-700"
               >
                 {n.label}
               </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2.5">
-          {signedIn ? (
-            <Link
-              href="/profile"
-              className="hidden lg:inline-flex items-center gap-2.5 h-11 pl-1.5 pr-3.5 rounded-xl border border-line text-[15px] font-semibold text-ink hover:border-dark-300"
-            >
-              <span
-                aria-hidden="true"
-                className="w-8 h-8 rounded-full bg-sand text-brass-700 flex items-center justify-center text-[13px] font-bold"
-              >
-                {initials(user!.full_name)}
-              </span>
-              Профиль
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="hidden lg:inline-flex items-center h-11 px-4 rounded-xl text-[15px] font-semibold text-ink hover:bg-paper"
-            >
-              Войти
-            </Link>
-          )}
-          <Link href="/campaigns" className="btn h-10 px-3.5 text-sm md:h-11 md:px-[18px] md:text-[15px] btn-primary">
-            Пожертвовать
-          </Link>
-          <button
-            type="button"
-            className="lg:hidden w-11 h-11 rounded-xl bg-paper text-ink flex items-center justify-center"
-            aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
-            aria-expanded={open}
-            aria-controls="site-drawer"
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <IconClose size={22} /> : <IconMenu size={22} />}
-          </button>
-        </div>
-      </div>
-
-      {open && (
-        <div id="site-drawer" className="lg:hidden girih surface-night px-4 pt-5 pb-6 animate-fade-in-down" style={{ ['--girih-opacity' as string]: 0.12 }}>
-          <nav aria-label="Меню" className="flex flex-col">
-            {NAV.map((n) => {
-              const active = isActive(pathname, n.href);
-              return (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={`flex items-center justify-between min-h-14 border-b border-paper/10 text-xl ${
-                    active ? 'text-gold font-bold' : 'text-paper font-medium'
-                  }`}
-                >
-                  <span>{n.label}</span>
-                  <IconChevronRight size={18} />
-                </Link>
-              );
-            })}
+            ))}
           </nav>
-          <div className="flex gap-2.5 mt-5">
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/contact"
+              className="hidden lg:inline-flex btn btn-secondary min-h-[44px] px-4"
+            >
+              Контакты
+            </Link>
             <Link
               href={signedIn ? '/profile' : '/login'}
-              className="flex-1 flex items-center justify-center h-12 rounded-xl border border-paper/30 text-paper text-[15px] font-semibold"
+              className="btn btn-secondary min-h-[44px] px-[18px]"
             >
-              {signedIn ? 'Мой профиль' : 'Войти'}
-            </Link>
-            <Link
-              href="/cabinet"
-              className="flex-1 flex items-center justify-center h-12 rounded-xl bg-paper/10 text-paper text-[15px] font-semibold"
-            >
-              Кабинет мечети
+              {signedIn ? 'Мои добрые дела' : 'Войти'}
             </Link>
           </div>
         </div>
-      )}
-    </header>
+      </header>
+
+      {/* Телефон: нижняя панель вкладок */}
+      <nav
+        aria-label="Разделы"
+        className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white flex px-2 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))] shadow-lg"
+      >
+        {tabs.map((t) => {
+          const Icon = t.icon;
+          return (
+            <Link
+              key={t.label}
+              href={t.href}
+              aria-current={t.active ? 'page' : undefined}
+              className={`flex-1 min-h-[52px] flex flex-col items-center justify-center gap-[3px] ${
+                t.active ? 'text-accent-700 hover:text-accent-700' : 'text-muted hover:text-ink'
+              }`}
+            >
+              <span
+                className={`w-[52px] h-[30px] rounded-full flex items-center justify-center ${
+                  t.active ? 'bg-accent-100' : ''
+                }`}
+              >
+                <Icon />
+              </span>
+              <span className="text-[11px] leading-[15px] font-medium">{t.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

@@ -13,7 +13,6 @@ export default function NewCampaignPage({ params }: { params: { id: string } }) 
 
   return (
     <CabinetPage
-      wide
       title="Новый сбор"
       crumbs={[
         { href: '/cabinet', label: 'Кабинет' },

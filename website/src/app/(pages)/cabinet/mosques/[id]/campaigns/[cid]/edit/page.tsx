@@ -15,7 +15,6 @@ export default function EditCampaignPage({ params }: { params: { id: string; cid
 
   return (
     <CabinetPage
-      wide
       title={campaign ? `Сбор «${campaign.title}»` : 'Сбор'}
       crumbs={[
         { href: '/cabinet', label: 'Кабинет' },
@@ -29,7 +28,7 @@ export default function EditCampaignPage({ params }: { params: { id: string; cid
         <Alert>Править можно только черновик или отклонённый сбор. Этот сбор уже на проверке или запущен.</Alert>
       )}
       {campaign && editable && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
           {campaign.status === 'rejected' && (
             <Alert tone="warn" title="Комитет отклонил сбор.">
               {campaign.moderation_note ? `«${campaign.moderation_note}». ` : ''}После сохранения он станет черновиком —

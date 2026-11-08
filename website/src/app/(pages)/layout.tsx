@@ -1,7 +1,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-/** Публичная часть сайта: шапка и подвал. Панель Комитета (/admin) — без них. */
+/** Публичная часть сайта: шапка, нижние вкладки на телефоне, подвал. Панель Комитета (/admin) — без них. */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <>

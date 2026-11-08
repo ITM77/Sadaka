@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, ReactNode, useState } from 'react';
-import { IconClose } from '@/components/icons';
+import { IconAlert, IconCheck, IconClose, IconInfo, IconSearch } from '@/components/icons';
 import { ApiError, Campaign, CampaignStatus, Mosque, plural, Report } from '@/lib/api';
 import { toDateInput } from '@/lib/cabinet';
 
@@ -10,6 +10,7 @@ export type ModAction = {
   key: string;
   label: string;
   path: string; // например /admin/mosques/:id/approve
+  /** primary — одобрение (зелёная «ok»-кнопка: оранжевых на экране не больше двух), danger — блокировка. */
   tone: 'primary' | 'danger' | 'secondary';
   done: string; // текст результата: «заявка одобрена»
   needsReason?: boolean;
@@ -21,9 +22,9 @@ export type ModAction = {
 };
 
 const BUTTON = {
-  primary: 'btn btn-primary',
-  secondary: 'btn btn-secondary border-[#D5CFC3]',
-  danger: 'btn bg-transparent text-[#A3312A] hover:bg-red-50 hover:text-[#8A2721]',
+  primary: 'btn bg-ok-soft text-ok hover:bg-[#D3EDDE] hover:text-ok',
+  secondary: 'btn btn-secondary',
+  danger: 'btn btn-danger',
 } as const;
 
 /** Кнопки модерации. Для отказа и блокировки сначала просит причину — это и есть подтверждение. */
@@ -42,12 +43,14 @@ export function ModerationActions({
   const [pending, setPending] = useState<ModAction | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState('');
   const [error, setError] = useState('');
 
   if (actions.length === 0 && !extra) return null;
 
   const run = async (a: ModAction, why = '') => {
     setBusy(true);
+    setRunning(a.key);
     setError('');
     try {
       await call(a.path, { method: 'POST', body: why ? { reason: why } : {} });
@@ -67,17 +70,26 @@ export function ModerationActions({
   };
 
   const id = pending ? `reason-${pending.path.replace(/[^a-z0-9]/gi, '-')}` : '';
+  const danger = pending?.tone === 'danger';
 
   return (
     <div className="flex flex-col gap-3">
       {pending ? (
-        <form onSubmit={submitReason} className="mod-reason flex flex-col gap-2.5 p-4 sm:p-[18px] rounded-[14px] bg-[#F2F8F6]">
-          <label className="text-[15px] font-semibold" htmlFor={id}>
-            {pending.reasonLabel ?? 'Причина — её увидит мечеть'}
-          </label>
+        <form
+          onSubmit={submitReason}
+          className={`infobox flex-col items-stretch gap-3 p-3.5 md:p-4 ${danger ? 'bg-[#FDECEC]' : ''}`}
+        >
+          <div className="flex gap-2.5 items-start">
+            <span className={`shrink-0 mt-px ${danger ? 'text-[#B42318]' : 'text-sec'}`}>
+              {danger ? <IconAlert size={18} /> : <IconInfo size={18} />}
+            </span>
+            <label className="text-sm leading-5 font-medium text-ink" htmlFor={id}>
+              {pending.reasonLabel ?? 'Причина — её увидит мечеть'}
+            </label>
+          </div>
           <textarea
             id={id}
-            className="input border-[#B9D3CB] text-[15px] resize-y"
+            className="input input-white resize-y min-h-[88px]"
             rows={2}
             autoFocus
             required
@@ -88,16 +100,14 @@ export function ModerationActions({
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              className={`btn h-11 rounded-[10px] px-[18px] ${
-                pending.tone === 'danger' ? 'bg-[#A3312A] text-white hover:bg-[#8A2721]' : 'btn-primary'
-              }`}
+              className={`btn flex-1 sm:flex-none ${danger ? 'bg-[#B42318] text-white hover:bg-[#931B12] hover:text-white' : 'btn-white'}`}
               disabled={busy || !reason.trim()}
             >
               {busy ? 'Сохраняем…' : (pending.confirmLabel ?? pending.label)}
             </button>
             <button
               type="button"
-              className="btn btn-ghost h-11 rounded-[10px] px-[18px]"
+              className="btn bg-transparent text-ink hover:bg-white/60 hover:text-ink flex-1 sm:flex-none"
               onClick={() => {
                 setPending(null);
                 setError('');
@@ -114,18 +124,19 @@ export function ModerationActions({
             <button
               key={a.key}
               type="button"
-              className={BUTTON[a.tone]}
+              className={`${BUTTON[a.tone]} flex-1 sm:flex-none`}
               disabled={busy}
               onClick={() => (a.needsReason ? setPending(a) : run(a))}
             >
-              {a.label}
+              {a.tone === 'primary' && <IconCheck size={18} />}
+              {busy && running === a.key ? 'Сохраняем…' : a.label}
             </button>
           ))}
           {extra}
         </div>
       )}
       {error && (
-        <p className="alert-error text-sm" role="alert">
+        <p className="alert-error" role="alert">
           {error}
         </p>
       )}
@@ -133,46 +144,123 @@ export function ModerationActions({
   );
 }
 
-export type Tab = { value: string; label: string; count?: number | null };
-
-/** Вкладки статусов: ?status=… */
-export function StatusTabs({ base, current, tabs }: { base: string; current: string; tabs: Tab[] }) {
+/** Ссылка на публичную страницу в ряду действий. */
+export function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <nav className="flex flex-wrap gap-1.5" aria-label="Фильтр по статусу">
-      {tabs.map((t) => {
-        const active = current === t.value;
-        const hasCount = typeof t.count === 'number';
-        return (
-          <Link
-            key={t.value || 'all'}
-            href={t.value ? `${base}?status=${t.value}` : base}
-            aria-current={active ? 'page' : undefined}
-            className="chip h-11 gap-2 font-semibold"
-          >
-            {t.label}
-            {hasCount &&
-              (active ? (
-                <span className="px-[7px] py-px rounded-full bg-white/20 text-[13px]">{t.count}</span>
-              ) : (
-                <span>· {t.count}</span>
-              ))}
-          </Link>
-        );
-      })}
-    </nav>
+    <Link href={href} target="_blank" rel="noopener noreferrer" className="btn btn-ghost px-4 flex-1 sm:flex-none">
+      {children}
+      <span className="sr-only"> (откроется в новой вкладке)</span>
+      <span aria-hidden="true">↗</span>
+    </Link>
   );
 }
 
+export type Tab = { value: string; label: string; count?: number | null };
+
+/**
+ * Список модерации как в 9d: слева колонка 268px с поиском и фильтром статуса (?status=…),
+ * справа — карточки. На телефоне фильтр — строка чипов над списком.
+ */
+export function ModerationLayout({
+  base,
+  current,
+  tabs,
+  search,
+  children,
+}: {
+  base: string;
+  current: string;
+  tabs: Tab[];
+  search?: { value: string; onChange: (v: string) => void; label: string; placeholder: string };
+  children: ReactNode;
+}) {
+  const href = (t: Tab) => (t.value ? `${base}?status=${t.value}` : base);
+  const labelId = `status-${base.replace(/\W+/g, '-')}`;
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[268px_minmax(0,1fr)] lg:items-start">
+      <aside className="panel min-w-0 flex flex-col gap-4 lg:gap-[18px] lg:sticky lg:top-20">
+        {search && (
+          <label className="input flex items-center gap-2.5 text-muted cursor-text focus-within:border-accent-700">
+            <IconSearch size={18} className="shrink-0" />
+            <span className="sr-only">{search.label}</span>
+            <input
+              type="search"
+              placeholder={search.placeholder}
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+              className="flex-1 min-w-0 h-full border-0 p-0 bg-transparent text-base text-ink focus:ring-0 focus:outline-none focus-visible:outline-none"
+            />
+          </label>
+        )}
+        <div>
+          <p className="overtitle" id={labelId}>
+            Статус
+          </p>
+          {/* Телефон и планшет: чипы с горизонтальной прокруткой */}
+          <nav
+            aria-labelledby={labelId}
+            className="lg:hidden flex gap-1.5 mt-2 -mx-4 md:-mx-5 px-4 md:px-5 overflow-x-auto [scrollbar-width:none]"
+          >
+            {tabs.map((t) => {
+              const active = current === t.value;
+              return (
+                <Link
+                  key={t.value || 'all'}
+                  href={href(t)}
+                  aria-current={active ? 'page' : undefined}
+                  className="chip min-h-[44px] shrink-0"
+                >
+                  {t.label}
+                  {typeof t.count === 'number' && (
+                    <span className={`tabular ${active ? '' : 'text-muted'}`}>{t.count}</span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+          {/* Веб: строки с отметкой и счётчиком */}
+          <nav aria-labelledby={labelId} className="hidden lg:flex flex-col mt-2">
+            {tabs.map((t) => {
+              const active = current === t.value;
+              return (
+                <Link
+                  key={t.value || 'all'}
+                  href={href(t)}
+                  aria-current={active ? 'page' : undefined}
+                  className="min-h-[44px] flex items-center gap-2.5 text-ink hover:text-accent-700 group"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-ink ${
+                      active ? 'bg-accent-500' : 'bg-app group-hover:bg-accent-100'
+                    }`}
+                  >
+                    {active && <IconCheck size={14} strokeWidth={2.25} />}
+                  </span>
+                  <span className={`flex-1 text-sm leading-5 font-medium ${active ? 'text-accent-700' : ''}`}>
+                    {t.label}
+                  </span>
+                  {typeof t.count === 'number' && <span className="caption tabular">{t.count}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+      <div className="flex flex-col gap-3 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** Заголовок страницы: title 24/30, подзаголовок и сводка справа (как в 9d). */
 export function AdminTitle({ children, sub, aside }: { children: ReactNode; sub?: ReactNode; aside?: ReactNode }) {
   return (
-    <header className="flex flex-wrap justify-between items-end gap-3">
-      <div>
-        <h1 className="text-[26px] sm:text-[32px] leading-tight font-bold" style={{ letterSpacing: '-0.01em' }}>
-          {children}
-        </h1>
-        {sub && <p className="mt-1 text-[15px] sm:text-base text-muted">{sub}</p>}
+    <header className="flex flex-wrap justify-between items-end gap-x-6 gap-y-1.5">
+      <div className="min-w-0">
+        <h1 className="title">{children}</h1>
+        {sub && <p className="body-text mt-1.5 max-w-[640px]">{sub}</p>}
       </div>
-      {aside}
+      {aside && <p className="body-text tabular">{aside}</p>}
     </header>
   );
 }
@@ -180,17 +268,29 @@ export function AdminTitle({ children, sub, aside }: { children: ReactNode; sub?
 export function Notice({ text, onClose }: { text: string; onClose: () => void }) {
   if (!text) return null;
   return (
-    <div className="alert-success flex items-center justify-between gap-3 py-1.5 pr-1.5" role="status">
-      <span>{text}</span>
+    <div className="alert-success flex items-center justify-between gap-3 py-1 pr-1" role="status">
+      <span className="flex items-center gap-2 min-w-0">
+        <IconCheck size={18} className="shrink-0" />
+        <span className="min-w-0 break-words">{text}</span>
+      </span>
       <button
         type="button"
         onClick={onClose}
         aria-label="Закрыть уведомление"
-        className="w-11 h-11 shrink-0 inline-flex items-center justify-center rounded-lg hover:bg-white/60"
+        className="w-11 h-11 shrink-0 inline-flex items-center justify-center rounded-full hover:bg-white/60"
       >
         <IconClose size={18} />
       </button>
     </div>
+  );
+}
+
+/** Строка «Найдено: N из M» при поиске. */
+export function FoundLine({ shown, total }: { shown: number; total: number }) {
+  return (
+    <p className="caption px-1" role="status">
+      Найдено: {shown} из {total}
+    </p>
   );
 }
 
@@ -199,10 +299,10 @@ export function Notice({ text, onClose }: { text: string; onClose: () => void })
 type Tone = 'ok' | 'wait' | 'bad' | 'neutral';
 
 const TONE: Record<Tone, string> = {
-  ok: 'badge badge-success px-3 py-1.5',
-  wait: 'badge bg-[#FBF1DC] text-[#7A4B00] px-3 py-1.5',
-  bad: 'badge badge-danger px-3 py-1.5',
-  neutral: 'badge badge-neutral px-3 py-1.5',
+  ok: 'badge badge-success',
+  wait: 'badge badge-warning',
+  bad: 'badge badge-danger',
+  neutral: 'badge badge-neutral',
 };
 
 export const MOSQUE_BADGE: Record<Mosque['status'], { label: string; tone: Tone }> = {
@@ -227,28 +327,31 @@ export const REPORT_BADGE: Record<Report['status'], { label: string; tone: Tone 
 };
 
 export function StatusBadge({ status }: { status: { label: string; tone: Tone } }) {
-  return <span className={`${TONE[status.tone]} self-start`}>{status.label}</span>;
+  return <span className={`${TONE[status.tone]} shrink-0`}>{status.label}</span>;
 }
 
 /* ---------- Карточка модерации ---------- */
 
 export function ModCard({
+  icon,
   title,
   meta,
   badge,
   children,
 }: {
+  icon?: ReactNode;
   title: ReactNode;
   meta?: ReactNode;
   badge: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <article className="bg-white border border-line rounded-[20px] p-5 sm:p-6 flex flex-col gap-[18px] transition-colors has-[.mod-reason]:border-primary-600 has-[.mod-reason]:shadow-[0_0_0_0.5px_#0F5C55]">
-      <div className="flex flex-wrap justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[19px] sm:text-[21px] leading-snug font-bold break-words">{title}</h2>
-          {meta && <p className="mt-1 text-[15px] text-muted">{meta}</p>}
+    <article className="panel flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        {icon && <span className="icon-tile hidden sm:flex">{icon}</span>}
+        <div className="min-w-0 flex-1 sm:pt-0.5">
+          <h2 className="title-sm break-words">{title}</h2>
+          {meta && <p className="caption mt-0.5 break-words">{meta}</p>}
         </div>
         {badge}
       </div>
@@ -258,31 +361,38 @@ export function ModCard({
 }
 
 export function Description({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] leading-relaxed text-dark-700 whitespace-pre-line break-words">{children}</p>;
+  return <p className="body-text whitespace-pre-line break-words">{children}</p>;
 }
 
-/** Серый блок «термин — значение». */
-export function InfoGrid({ items }: { items: { label: string; value: ReactNode; strong?: boolean }[] }) {
+type KvItem = { label: string; value: ReactNode };
+
+/** Строки «ключ — значение» на плитке; на вебе — в две колонки. */
+export function KvGrid({ items }: { items: KvItem[] }) {
+  const half = Math.ceil(items.length / 2);
+  const cols = items.length > 2 ? [items.slice(0, half), items.slice(half)] : [items];
   return (
-    <dl className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3 p-4 rounded-[14px] bg-[#F7F5F0]">
-      {items.map((i) => (
-        <div key={i.label} className="min-w-0">
-          <dt className="text-[13px] text-muted">{i.label}</dt>
-          <dd className={`mt-0.5 break-words ${i.strong ? 'text-base font-bold' : 'text-[15px] font-semibold'}`}>
-            {i.value}
-          </dd>
-        </div>
+    <div className={cols.length > 1 ? 'grid grid-cols-[minmax(0,1fr)] gap-2 md:grid-cols-2' : ''}>
+      {cols.map((col, i) => (
+        <dl key={i} className="kv">
+          {col.map((it) => (
+            <div key={it.label}>
+              <dt className="text-body shrink-0">{it.label}</dt>
+              <dd className="font-medium text-ink text-right min-w-0 break-words">{it.value}</dd>
+            </div>
+          ))}
+        </dl>
       ))}
-    </dl>
+    </div>
   );
 }
 
 export function DecisionNote({ note, label = 'Решение Комитета' }: { note?: string; label?: string }) {
   if (!note) return null;
   return (
-    <p className="px-4 py-3.5 rounded-xl bg-[#F7F5F0] text-sm leading-relaxed text-dark-700 break-words">
-      <strong>{label}:</strong> «{note}»
-    </p>
+    <div className="tile">
+      <p className="overtitle">{label}</p>
+      <p className="mt-1 text-sm leading-5 text-ink break-words">«{note}»</p>
+    </div>
   );
 }
 
@@ -290,9 +400,14 @@ export function DecisionNote({ note, label = 'Решение Комитета' }
 
 export function ListSkeleton() {
   return (
-    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Загрузка">
+    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Загрузка">
       {[0, 1].map((i) => (
-        <div key={i} className="h-48 rounded-[20px] bg-white border border-line animate-pulse" />
+        <div key={i} className="panel flex flex-col gap-4">
+          <div className="skeleton h-5 w-2/3" />
+          <div className="skeleton h-4 w-1/2" />
+          <div className="skeleton h-24 rounded-tile" />
+          <div className="skeleton h-12 w-40 rounded-full" />
+        </div>
       ))}
     </div>
   );
@@ -307,3 +422,9 @@ export function daysAgo(iso: string) {
 }
 
 export const isPublic = (c?: Pick<Campaign, 'status'>) => c?.status === 'active' || c?.status === 'completed';
+
+/** Поиск без учёта регистра по склеенной строке полей. */
+export function matches(q: string, ...fields: (string | undefined | null)[]) {
+  const s = q.trim().toLowerCase();
+  return !s || fields.filter(Boolean).join(' ').toLowerCase().includes(s);
+}
