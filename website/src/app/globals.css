@@ -205,7 +205,7 @@
 
   /* Подтверждение (одобрить / принять) — зелёная пилюля, не тратит лимит оранжевых кнопок */
   .btn-ok {
-    @apply bg-ok-soft text-ok hover:bg-[#D3EDDE] hover:text-ok;
+    @apply bg-ok-soft text-ok hover:bg-[#DCF0E4] hover:text-ok;
   }
 
   .btn-danger {

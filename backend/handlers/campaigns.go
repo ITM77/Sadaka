@@ -215,7 +215,7 @@ func (h *Handler) SubmitCampaign(c *gin.Context) {
 	if !ok {
 		return
 	}
-	unreported, err := h.countUnreportedCampaigns(mosque.ID)
+	unreported, err := h.countUnreportedCampaigns(h.DB, mosque.ID)
 	if err != nil {
 		utils.InternalError(c, err)
 		return
@@ -274,10 +274,10 @@ func (h *Handler) MyMosqueCampaigns(c *gin.Context) {
 }
 
 // countUnreportedCampaigns — завершённые (или активные, но уже истёкшие)
-// кампании мечети без опубликованного отчёта.
-func (h *Handler) countUnreportedCampaigns(mosqueID uuid.UUID) (int64, error) {
+// кампании мечети без опубликованного отчёта. db — h.DB или открытая транзакция.
+func (h *Handler) countUnreportedCampaigns(db *gorm.DB, mosqueID uuid.UUID) (int64, error) {
 	var n int64
-	err := h.DB.Model(&models.Campaign{}).
+	err := db.Model(&models.Campaign{}).
 		Where("mosque_id = ?", mosqueID).
 		Where("status = ? OR (status = ? AND end_date <= ?)",
 			models.CampaignStatusCompleted, models.CampaignStatusActive, h.Now()).

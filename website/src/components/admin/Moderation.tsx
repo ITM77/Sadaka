@@ -22,7 +22,7 @@ export type ModAction = {
 };
 
 const BUTTON = {
-  primary: 'btn bg-ok-soft text-ok hover:bg-[#D3EDDE] hover:text-ok',
+  primary: 'btn bg-ok-soft text-ok hover:bg-[#DCF0E4] hover:text-ok',
   secondary: 'btn btn-secondary',
   danger: 'btn btn-danger',
 } as const;

@@ -70,7 +70,7 @@ function List() {
   return (
     <div className="flex flex-col gap-4 md:gap-5">
       <AdminTitle
-        sub="Пока отчёт не принят или отклонён, мечеть не может открывать новые сборы"
+        sub="Поданный отчёт сразу снимает запрет на новые сборы. Если отклонить отчёт, мечеть снова не сможет открывать сборы, пока не подаст исправленный"
         aside={stats ? `${stats.reports_pending} на проверке` : undefined}
       >
         Отчёты мечетей
@@ -154,7 +154,7 @@ function List() {
                                   href={url}
                                   target="_blank"
                                   rel="noopener noreferrer nofollow"
-                                  className="tile flex items-center gap-3 min-h-[64px] py-2.5 text-ink hover:text-accent-700 hover:bg-[#DDE7E6] transition-colors"
+                                  className="tile flex items-center gap-3 min-h-[64px] py-2.5 text-ink hover:text-accent-800 hover:bg-[#DDE7E6] transition-colors"
                                 >
                                   <span className="w-10 h-10 rounded-xl bg-white text-sec flex items-center justify-center shrink-0">
                                     <IconReceipt size={20} />

@@ -32,6 +32,18 @@ func TestSavobPoints(t *testing.T) {
 	}
 }
 
+func TestCanApproveCampaign(t *testing.T) {
+	if err := CanApproveCampaign(models.MosqueStatusApproved, 0); err != nil {
+		t.Fatalf("одобренная мечеть без долгов: %v", err)
+	}
+	if err := CanApproveCampaign(models.MosqueStatusApproved, 1); !errors.Is(err, ErrReportMissingOnApprove) {
+		t.Fatalf("сбор без отчёта должен блокировать одобрение, получили %v", err)
+	}
+	if err := CanApproveCampaign(models.MosqueStatusBlocked, 0); !errors.Is(err, ErrMosqueNotApproved) {
+		t.Fatalf("заблокированная мечеть: %v", err)
+	}
+}
+
 func TestCanSubmitCampaign(t *testing.T) {
 	approved, draft := models.MosqueStatusApproved, models.CampaignStatusDraft
 

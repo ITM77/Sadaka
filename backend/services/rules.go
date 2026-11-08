@@ -52,6 +52,21 @@ func CanSubmitCampaign(campaignStatus, mosqueStatus string, unreportedCompleted 
 	return nil
 }
 
+// ErrReportMissingOnApprove — то же правило «нет отчёта — нет нового сбора», но на шаге
+// одобрения Комитетом: пока сбор ждал решения, у мечети мог завершиться другой сбор без отчёта.
+var ErrReportMissingOnApprove = errors.New("у мечети есть завершённый сбор без отчёта — одобрить новый сбор можно после того, как мечеть опубликует отчёт")
+
+// CanApproveCampaign — может ли Комитет одобрить кампанию, ожидающую решения.
+func CanApproveCampaign(mosqueStatus string, unreportedCompleted int64) error {
+	if mosqueStatus != models.MosqueStatusApproved {
+		return ErrMosqueNotApproved
+	}
+	if unreportedCompleted > 0 {
+		return ErrReportMissingOnApprove
+	}
+	return nil
+}
+
 // CanDonate — принимает ли кампания пожертвования в момент now.
 func CanDonate(c *models.Campaign, mosqueStatus string, now time.Time) error {
 	if mosqueStatus != models.MosqueStatusApproved {

@@ -9,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"sadaka.tj/backend/models"
+	"sadaka.tj/backend/services"
 	"sadaka.tj/backend/utils"
 )
 
@@ -204,6 +205,14 @@ func (h *Handler) moderateCampaign(c *gin.Context, approve bool) {
 			}
 			if mosque.Status != models.MosqueStatusApproved {
 				return errConflict("мечеть не одобрена или заблокирована")
+			}
+			// Пока сбор ждал решения, у мечети мог завершиться другой сбор без отчёта.
+			unreported, err := h.countUnreportedCampaigns(tx, mosque.ID)
+			if err != nil {
+				return err
+			}
+			if err := services.CanApproveCampaign(mosque.Status, unreported); err != nil {
+				return errConflict(err.Error())
 			}
 			now := h.Now()
 			campaign.Status = models.CampaignStatusActive

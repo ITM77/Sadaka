@@ -152,8 +152,10 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
 
           {owing.length > 0 ? (
             <Alert tone="warn" title={`Нужен отчёт по ${owingNames}.`}>
-              {owingRejected ? 'Комитет отклонил прошлый отчёт — пока он не принят' : 'Пока отчёт не опубликован'}, новые
-              сборы не запустятся.
+              {owingRejected
+                ? 'Комитет отклонил прошлый отчёт — пока вы не подадите исправленный'
+                : 'Пока отчёт не опубликован'}
+              , новые сборы не запустятся.
             </Alert>
           ) : (
             <div className="infobox">
