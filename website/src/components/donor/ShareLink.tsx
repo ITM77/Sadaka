@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n/client';
 
 /** Абсолютный адрес страницы: на сервере — путь, в браузере — с доменом. */
 export function usePageUrl(path: string) {
@@ -18,7 +19,7 @@ async function copy(text: string) {
   }
 }
 
-/** Кнопка «Поделиться»: системное меню, если есть, иначе копирование ссылки. */
+/** Кнопка «Поделиться»: системное меню, если есть, иначе копирование ссылки. Подписи — по-русски, переводятся здесь. */
 export function ShareButton({
   path,
   title,
@@ -38,6 +39,7 @@ export function ShareButton({
   label?: string;
   copiedLabel?: string;
 }) {
+  const { t } = useI18n();
   const url = usePageUrl(path);
   const [state, setState] = useState<'idle' | 'copied'>('idle');
 
@@ -61,9 +63,9 @@ export function ShareButton({
       <span className={iconClassName} aria-hidden="true">
         {state === 'copied' ? copiedIcon : icon}
       </span>
-      {state === 'copied' ? copiedLabel : label}
+      {state === 'copied' ? t(copiedLabel) : t(label)}
       <span className="sr-only" aria-live="polite">
-        {state === 'copied' ? 'Ссылка скопирована' : ''}
+        {state === 'copied' ? t('Ссылка скопирована') : ''}
       </span>
     </button>
   );
@@ -71,13 +73,14 @@ export function ShareButton({
 
 /** Блок «Ссылка для QR-кода»: адрес страницы и кнопка копирования. */
 export function QrLink({ path }: { path: string }) {
+  const { t } = useI18n();
   const url = usePageUrl(path);
   const [copied, setCopied] = useState(false);
 
   return (
     <div className="flex flex-col gap-3 self-stretch">
       <label htmlFor="qr-link" className="sr-only">
-        Ссылка для QR-кода
+        {t('Ссылка для QR-кода')}
       </label>
       <input
         id="qr-link"
@@ -96,7 +99,7 @@ export function QrLink({ path }: { path: string }) {
           }
         }}
       >
-        <span aria-live="polite">{copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}</span>
+        <span aria-live="polite">{copied ? t('Ссылка скопирована') : t('Скопировать ссылку')}</span>
       </button>
     </div>
   );

@@ -3,14 +3,18 @@ import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
 import EmptyState from '@/components/EmptyState';
 import { IconSearch } from '@/components/icons';
-import { apiFetch, Campaign, CATEGORY_LABELS, plural, progress } from '@/lib/api';
+import { apiFetch, Campaign, CATEGORY_LABELS, progress } from '@/lib/api';
+import { getI18n } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Сборы — Садака',
-  description: 'Активные сборы мечетей Таджикистана, одобренные Комитетом улемов.',
-};
+export function generateMetadata(): Metadata {
+  const { t } = getI18n();
+  return {
+    title: t('Сборы — Садака'),
+    description: t('Активные сборы мечетей Таджикистана, одобренные Комитетом улемов.'),
+  };
+}
 
 const SORTS = {
   new: 'Новые',
@@ -22,6 +26,7 @@ type Sort = keyof typeof SORTS;
 type Params = { category?: string; q?: string; city?: string; sort?: string };
 
 export default async function Campaigns({ searchParams }: { searchParams: Params }) {
+  const { t, fmt } = getI18n();
   const category = searchParams.category && CATEGORY_LABELS[searchParams.category] ? searchParams.category : '';
   const q = (searchParams.q ?? '').trim();
   const city = (searchParams.city ?? '').trim();
@@ -65,14 +70,14 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
   return (
     <div className="page flex flex-col gap-3">
       <header className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between md:gap-4 pt-1 md:pt-0">
-        <h1 className="title">Сборы</h1>
-        <p className="body-text">Каждый сбор одобрен Комитетом улемов. После завершения — отчёт мечети.</p>
+        <h1 className="title">{t('Сборы')}</h1>
+        <p className="body-text">{t('Каждый сбор одобрен Комитетом улемов. После завершения — отчёт мечети.')}</p>
       </header>
 
       <form role="search" action="/campaigns" className="panel flex flex-wrap gap-2">
         {category && <input type="hidden" name="category" value={category} />}
         <label className="relative basis-full md:basis-auto md:flex-[1_1_280px] min-w-0">
-          <span className="sr-only">Поиск сбора</span>
+          <span className="sr-only">{t('Поиск сбора')}</span>
           <IconSearch
             size={18}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
@@ -81,14 +86,14 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Название сбора или мечети"
+            placeholder={t('Название сбора или мечети')}
             className="input pl-10"
           />
         </label>
         <label className="flex-[1_1_40%] md:flex-[0_1_200px] min-w-0">
-          <span className="sr-only">Город</span>
+          <span className="sr-only">{t('Город')}</span>
           <select name="city" defaultValue={city} className="input">
-            <option value="">Все города</option>
+            <option value="">{t('Все города')}</option>
             {cities.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -97,30 +102,30 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
           </select>
         </label>
         <label className="flex-[1_1_40%] md:flex-[0_1_200px] min-w-0">
-          <span className="sr-only">Сортировка</span>
+          <span className="sr-only">{t('Сортировка')}</span>
           <select name="sort" defaultValue={sort} className="input">
             {Object.entries(SORTS).map(([id, label]) => (
               <option key={id} value={id}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </select>
         </label>
         <button type="submit" className="btn btn-primary basis-full md:basis-auto">
-          Найти
+          {t('Найти')}
         </button>
       </form>
 
       <nav
-        aria-label="Категории"
+        aria-label={t('Категории')}
         className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none]"
       >
         <CategoryLink href={hrefFor('')} active={!category}>
-          Все
+          {t('Все')}
         </CategoryLink>
         {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
           <CategoryLink key={id} href={hrefFor(id)} active={category === id}>
-            {label}
+            {t(label)}
           </CategoryLink>
         ))}
       </nav>
@@ -128,20 +133,20 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
       {campaigns.length === 0 ? (
         <EmptyState
           icon={<IconSearch />}
-          title={filtered ? 'Ничего не найдено' : 'Сейчас нет активных кампаний'}
+          title={filtered ? t('Ничего не найдено') : t('Сейчас нет активных кампаний')}
         >
           {filtered ? (
             <Link href={category ? `/campaigns?category=${category}` : '/campaigns'} className="link-action">
-              Сбросить поиск
+              {t('Сбросить поиск')}
             </Link>
           ) : (
-            'Новые сборы появятся после одобрения Комитетом улемов.'
+            t('Новые сборы появятся после одобрения Комитетом улемов.')
           )}
         </EmptyState>
       ) : (
         <section aria-labelledby="campaigns-found" className="panel">
           <h2 id="campaigns-found" className="overtitle" aria-live="polite">
-            Найдено {campaigns.length} {plural(campaigns.length, ['сбор', 'сбора', 'сборов'])}
+            {t('Найдено {n} {what}', { n: campaigns.length, what: fmt.plural(campaigns.length, ['сбор', 'сбора', 'сборов']) })}
           </h2>
           <div className="grid gap-2 mt-3 sm:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((c) => (

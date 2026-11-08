@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { IconShield } from '@/components/icons';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n/client';
 
 /** Разрешаем возвращаться только на свои страницы (защита от open redirect). */
 function safeNext(raw: string | null) {
@@ -14,6 +15,7 @@ function safeNext(raw: string | null) {
 
 export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const { user, ready, login, register } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get('next'));
@@ -50,19 +52,27 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
     <div className="page">
       <section className="panel-lg mx-auto w-full max-w-[440px] flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
-          <p className="overtitle">Ассалому алайкум</p>
-          <h1 className="title">{isLogin ? 'Вход' : 'Регистрация'}</h1>
+          <p className="overtitle">{t('Ассалому алайкум')}</p>
+          <h1 className="title">{isLogin ? t('Вход') : t('Регистрация')}</h1>
           <p className="body-text">
-            Аккаунт нужен, чтобы жертвовать, копить Савоб и получать отчёты мечетей о ваших сборах.
+            {t('Аккаунт нужен, чтобы жертвовать, копить Савоб и получать отчёты мечетей о ваших сборах.')}
           </p>
         </div>
 
-        <nav aria-label="Вход или регистрация" className="segmented">
-          <Link href={`/login${query}`} aria-current={isLogin ? 'page' : undefined} className="hover:text-accent-700">
-            Вход
+        <nav aria-label={t('Вход или регистрация')} className="segmented">
+          <Link
+            href={`/login${query}`}
+            aria-current={isLogin ? 'page' : undefined}
+            className="!min-h-11 hover:text-accent-700"
+          >
+            {t('Вход')}
           </Link>
-          <Link href={`/register${query}`} aria-current={!isLogin ? 'page' : undefined} className="hover:text-accent-700">
-            Регистрация
+          <Link
+            href={`/register${query}`}
+            aria-current={!isLogin ? 'page' : undefined}
+            className="!min-h-11 hover:text-accent-700"
+          >
+            {t('Регистрация')}
           </Link>
         </nav>
 
@@ -70,7 +80,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           {!isLogin && (
             <div>
               <label htmlFor="fullName" className="label">
-                Имя и фамилия
+                {t('Имя и фамилия')}
               </label>
               <input
                 id="fullName"
@@ -84,7 +94,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           )}
           <div>
             <label htmlFor="phone" className="label">
-              Номер телефона
+              {t('Номер телефона')}
             </label>
             <div className="flex items-center h-12 rounded-xl border-2 border-transparent bg-app transition-colors focus-within:border-accent-700">
               <span className="pl-3.5 pr-1 text-base font-medium text-body tabular" aria-hidden="true">
@@ -104,12 +114,12 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               />
             </div>
             <p id="phone-hint" className="sr-only">
-              Код страны +992 подставляется автоматически
+              {t('Код страны +992 подставляется автоматически')}
             </p>
           </div>
           <div>
             <label htmlFor="password" className="label">
-              Пароль
+              {t('Пароль')}
             </label>
             <input
               id="password"
@@ -124,31 +134,33 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             />
             {!isLogin && (
               <p id="password-hint" className="hint">
-                Минимум 8 символов, буквы и цифры.
+                {t('Минимум 8 символов, буквы и цифры.')}
               </p>
             )}
           </div>
 
           {error && (
             <p className="alert-error" role="alert">
-              {error}
+              {t(error)}
             </p>
           )}
 
           <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>
-            {busy ? 'Подождите…' : isLogin ? 'Войти' : 'Создать аккаунт'}
+            {busy ? t('Подождите…') : isLogin ? t('Войти') : t('Создать аккаунт')}
           </button>
         </form>
 
         <div className="infobox">
           <IconShield size={18} className="shrink-0 mt-px" />
-          <span>Савоб за каждое пожертвование, отчёты по сборам, которым вы помогли, и кабинет для представителей мечетей.</span>
+          <span>
+            {t('Савоб за каждое пожертвование, отчёты по сборам, которым вы помогли, и кабинет для представителей мечетей.')}
+          </span>
         </div>
 
-        <p className="caption !text-[13px]">
-          Вы сотрудник Комитета улемов?{' '}
-          <Link href="/admin/login" className="link-action !text-[13px]">
-            Вход для Комитета
+        <p className="caption !text-[13px] flex flex-wrap items-center gap-x-1 -my-3">
+          {t('Вы сотрудник Комитета улемов?')}
+          <Link href="/admin/login" className="link-action !text-[13px] inline-flex items-center min-h-11">
+            {t('Вход для Комитета')}
           </Link>
         </p>
       </section>

@@ -7,9 +7,11 @@ import Logo from '@/components/Logo';
 import { IconArrowLeft, IconLock } from '@/components/icons';
 import { ApiError } from '@/lib/api';
 import { useAdmin } from '@/lib/adminAuth';
+import { LangSwitch, useI18n } from '@/lib/i18n/client';
 
 export default function AdminLoginPage() {
   const { admin, ready, login } = useAdmin();
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,8 +38,11 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-app flex flex-col">
       <header className="bg-white">
-        <div className="container-custom h-16 flex items-center">
-          <Logo href="/" subtitle="Панель Комитета улемов" />
+        <div className="container-custom h-16 flex items-center justify-between gap-3">
+          <div className="min-w-0 overflow-hidden">
+            <Logo href="/" subtitle="Панель Комитета улемов" />
+          </div>
+          <LangSwitch className="shrink-0" />
         </div>
       </header>
 
@@ -45,15 +50,15 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-[420px] flex flex-col gap-3">
           <form onSubmit={onSubmit} className="panel-lg flex flex-col gap-5">
             <div>
-              <p className="overtitle">Комитет улемов</p>
-              <h1 className="title mt-1.5">Вход в панель надзора</h1>
-              <p className="body-text mt-1.5">Одобрение мечетей, кампаний и отчётов платформы Садака.</p>
+              <p className="overtitle">{t('Комитет улемов')}</p>
+              <h1 className="title mt-1.5">{t('Вход в панель надзора')}</h1>
+              <p className="body-text mt-1.5">{t('Одобрение мечетей, кампаний и отчётов платформы Садака.')}</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <div>
                 <label htmlFor="a-email" className="label">
-                  Служебная почта
+                  {t('Служебная почта')}
                 </label>
                 <input
                   id="a-email"
@@ -68,7 +73,7 @@ export default function AdminLoginPage() {
               </div>
               <div>
                 <label htmlFor="a-password" className="label">
-                  Пароль
+                  {t('Пароль')}
                 </label>
                 <input
                   id="a-password"
@@ -84,23 +89,23 @@ export default function AdminLoginPage() {
 
             {error && (
               <p className="alert-error" role="alert">
-                {error}
+                {t(error)}
               </p>
             )}
 
             <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>
-              {busy ? 'Входим…' : 'Войти'}
+              {busy ? t('Входим…') : t('Войти')}
             </button>
 
             <div className="infobox">
               <IconLock size={18} className="shrink-0 mt-px" />
-              <span>Доступ выдаёт суперадмин Комитета. Не передавайте пароль другим сотрудникам.</span>
+              <span>{t('Доступ выдаёт суперадмин Комитета. Не передавайте пароль другим сотрудникам.')}</span>
             </div>
           </form>
 
           <Link href="/" className="btn btn-ghost self-center">
             <IconArrowLeft size={18} />
-            На сайт Садаки
+            {t('На сайт Садаки')}
           </Link>
         </div>
       </main>

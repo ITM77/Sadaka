@@ -4,9 +4,11 @@ import { notFound, useRouter } from 'next/navigation';
 import CampaignForm from '@/components/cabinet/CampaignForm';
 import { Alert, CabinetPage, Loading } from '@/components/cabinet/ui';
 import { useMosqueCabinet } from '@/components/cabinet/useMosqueCabinet';
+import { useI18n } from '@/lib/i18n/client';
 
 export default function EditCampaignPage({ params }: { params: { id: string; cid: string } }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { data, error, notFound: missing } = useMosqueCabinet(params.id);
   const campaign = data?.campaigns.find((c) => c.id === params.cid);
   if (missing || (data && !campaign)) notFound();
@@ -15,24 +17,24 @@ export default function EditCampaignPage({ params }: { params: { id: string; cid
 
   return (
     <CabinetPage
-      title={campaign ? `Сбор «${campaign.title}»` : 'Сбор'}
+      title={campaign ? t('Сбор «{title}»', { title: campaign.title }) : t('Сбор')}
       crumbs={[
-        { href: '/cabinet', label: 'Кабинет' },
-        { href: back, label: data?.mosque.name ?? 'Мечеть' },
+        { href: '/cabinet', label: t('Кабинет') },
+        { href: back, label: data?.mosque.name ?? t('Мечеть') },
       ]}
-      current="Редактирование"
+      current={t('Редактирование')}
     >
-      {error && <Alert>{error}</Alert>}
+      {error && <Alert>{t(error)}</Alert>}
       {!data && !error && <Loading />}
       {campaign && !editable && (
-        <Alert>Править можно только черновик или отклонённый сбор. Этот сбор уже на проверке или запущен.</Alert>
+        <Alert>{t('Править можно только черновик или отклонённый сбор. Этот сбор уже на проверке или запущен.')}</Alert>
       )}
       {campaign && editable && (
         <div className="flex flex-col gap-3">
           {campaign.status === 'rejected' && (
-            <Alert tone="warn" title="Комитет отклонил сбор.">
-              {campaign.moderation_note ? `«${campaign.moderation_note}». ` : ''}После сохранения он станет черновиком —
-              отправьте его на одобрение снова.
+            <Alert tone="warn" title={t('Комитет отклонил сбор.')}>
+              {campaign.moderation_note ? `«${campaign.moderation_note}». ` : ''}
+              {t('После сохранения он станет черновиком — отправьте его на одобрение снова.')}
             </Alert>
           )}
           <CampaignForm

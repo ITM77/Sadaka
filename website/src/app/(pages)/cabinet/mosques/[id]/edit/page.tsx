@@ -5,9 +5,11 @@ import MosqueForm from '@/components/cabinet/MosqueForm';
 import { MosqueChecklist } from '@/components/cabinet/MosqueChecklist';
 import { Alert, CabinetPage, Loading } from '@/components/cabinet/ui';
 import { useMosqueCabinet } from '@/components/cabinet/useMosqueCabinet';
+import { useI18n } from '@/lib/i18n/client';
 
 export default function EditMosquePage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { data, error, notFound: missing } = useMosqueCabinet(params.id);
   if (missing) notFound();
 
@@ -15,22 +17,24 @@ export default function EditMosquePage({ params }: { params: { id: string } }) {
 
   return (
     <CabinetPage
-      title="Данные мечети"
+      title={t('Данные мечети')}
       crumbs={[
-        { href: '/cabinet', label: 'Кабинет' },
-        { href: `/cabinet/mosques/${params.id}`, label: data?.mosque.name ?? 'Мечеть' },
+        { href: '/cabinet', label: t('Кабинет') },
+        { href: `/cabinet/mosques/${params.id}`, label: data?.mosque.name ?? t('Мечеть') },
       ]}
-      current="Изменить данные"
+      current={t('Изменить данные')}
     >
-      {error && <Alert>{error}</Alert>}
+      {error && <Alert>{t(error)}</Alert>}
       {!data && !error && <Loading />}
-      {data && data.mosque.status === 'blocked' && <Alert>Мечеть заблокирована Комитетом — данные изменить нельзя.</Alert>}
+      {data && data.mosque.status === 'blocked' && (
+        <Alert>{t('Мечеть заблокирована Комитетом — данные изменить нельзя.')}</Alert>
+      )}
       {data && data.mosque.status !== 'blocked' && (
         <div className="flex flex-col gap-3">
           {data.mosque.status === 'rejected' && (
             <Alert tone="warn">
-              {data.mosque.moderation_note ? `Комитет: «${data.mosque.moderation_note}». ` : ''}После сохранения заявка
-              снова уйдёт на рассмотрение Комитету.
+              {data.mosque.moderation_note ? `${t('Комитет: «{note}».', { note: data.mosque.moderation_note })} ` : ''}
+              {t('После сохранения заявка снова уйдёт на рассмотрение Комитету.')}
             </Alert>
           )}
           <div className={checklist ? 'layout-aside' : 'max-w-[760px]'}>

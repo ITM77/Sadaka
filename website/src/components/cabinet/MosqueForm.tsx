@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { IconLock } from '@/components/icons';
 import { ApiError, apiFetch, Mosque } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n/client';
 import { Field, FormCard, FormError, StickyAction } from './ui';
 
 type Values = {
@@ -34,6 +35,7 @@ function initial(m?: Mosque): Values {
 
 export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSaved: (m: Mosque) => void }) {
   const { token } = useAuth();
+  const { t } = useI18n();
   const [v, setV] = useState<Values>(() => initial(mosque));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -76,35 +78,39 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
 
   return (
     <form onSubmit={onSubmit} className="min-w-0 flex flex-col gap-3">
-      <FormCard as="fieldset" title="Основное">
-        <Field id="m-name" label="Название мечети">
+      <FormCard as="fieldset" title={t('Основное')}>
+        <Field id="m-name" label={t('Название мечети')}>
           <input id="m-name" className="input" required value={v.name} onChange={set('name')} placeholder="Масҷиди Ҷомеъ" />
         </Field>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field id="m-city" label="Город">
+          <Field id="m-city" label={t('Город')}>
             <input id="m-city" className="input" required value={v.city} onChange={set('city')} placeholder="Душанбе" />
           </Field>
-          <Field id="m-address" label="Адрес">
+          <Field id="m-address" label={t('Адрес')}>
             <input id="m-address" className="input" required value={v.address} onChange={set('address')} />
           </Field>
         </div>
-        <Field id="m-desc" label="О мечети" hint="Коротко: история, сколько прихожан, чем живёт община. Видят жертвователи.">
+        <Field
+          id="m-desc"
+          label={t('О мечети')}
+          hint={t('Коротко: история, сколько прихожан, чем живёт община. Видят жертвователи.')}
+        >
           <textarea id="m-desc" className="input resize-y" rows={4} value={v.description} onChange={set('description')} />
         </Field>
       </FormCard>
 
-      <FormCard as="fieldset" title="Имам и контакты">
+      <FormCard as="fieldset" title={t('Имам и контакты')}>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field id="m-imam" label="Имам">
+          <Field id="m-imam" label={t('Имам')}>
             <input id="m-imam" className="input" value={v.imam_name} onChange={set('imam_name')} />
           </Field>
           <Field
             id="m-imam-phone"
-            label="Телефон имама"
+            label={t('Телефон имама')}
             hint={
               <>
                 <IconLock size={14} />
-                Видит только Комитет улемов
+                {t('Видит только Комитет улемов')}
               </>
             }
           >
@@ -118,14 +124,18 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
             />
           </Field>
         </div>
-        <Field id="m-phone" label="Телефон мечети" hint="Публикуется на странице мечети.">
+        <Field id="m-phone" label={t('Телефон мечети')} hint={t('Публикуется на странице мечети.')}>
           <input id="m-phone" className="input" type="tel" value={v.phone} onChange={set('phone')} placeholder="+992 …" />
         </Field>
       </FormCard>
 
-      <FormCard as="fieldset" title="Место на карте" description="Необязательно. Чтобы прихожане нашли мечеть рядом.">
+      <FormCard
+        as="fieldset"
+        title={t('Место на карте')}
+        description={t('Необязательно. Чтобы прихожане нашли мечеть рядом.')}
+      >
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <Field id="m-lat" label="Широта">
+          <Field id="m-lat" label={t('Широта')}>
             <input
               id="m-lat"
               className="input tabular"
@@ -135,7 +145,7 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
               placeholder="38.5598"
             />
           </Field>
-          <Field id="m-lng" label="Долгота">
+          <Field id="m-lng" label={t('Долгота')}>
             <input
               id="m-lng"
               className="input tabular"
@@ -148,17 +158,17 @@ export default function MosqueForm({ mosque, onSaved }: { mosque?: Mosque; onSav
         </div>
       </FormCard>
 
-      {error && <FormError>{error}</FormError>}
+      {error && <FormError>{t(error)}</FormError>}
 
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:px-1">
         {!mosque && (
           <p className="caption md:order-2 px-1 md:px-0">
-            Комитет улемов проверит заявку. После одобрения вы сможете открывать сборы.
+            {t('Комитет улемов проверит заявку. После одобрения вы сможете открывать сборы.')}
           </p>
         )}
         <StickyAction>
           <button type="submit" className="btn btn-primary btn-lg btn-block md:w-auto" disabled={busy}>
-            {busy ? 'Сохраняем…' : mosque ? 'Сохранить' : 'Отправить заявку'}
+            {busy ? t('Сохраняем…') : mosque ? t('Сохранить') : t('Отправить заявку')}
           </button>
         </StickyAction>
       </div>

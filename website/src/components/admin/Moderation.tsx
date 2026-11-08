@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { FormEvent, ReactNode, useState } from 'react';
 import { IconAlert, IconCheck, IconClose, IconInfo, IconSearch } from '@/components/icons';
-import { ApiError, Campaign, CampaignStatus, Mosque, plural, Report } from '@/lib/api';
-import { toDateInput } from '@/lib/cabinet';
+import { ApiError, Campaign, CampaignStatus, Mosque, Report } from '@/lib/api';
+import { useI18n } from '@/lib/i18n/client';
 
 export type ModAction = {
   key: string;
@@ -45,6 +45,7 @@ export function ModerationActions({
   const [busy, setBusy] = useState(false);
   const [running, setRunning] = useState('');
   const [error, setError] = useState('');
+  const { t } = useI18n();
 
   if (actions.length === 0 && !extra) return null;
 
@@ -84,7 +85,7 @@ export function ModerationActions({
               {danger ? <IconAlert size={18} /> : <IconInfo size={18} />}
             </span>
             <label className="text-sm leading-5 font-medium text-ink" htmlFor={id}>
-              {pending.reasonLabel ?? 'Причина — её увидит мечеть'}
+              {t(pending.reasonLabel ?? 'Причина — её увидит мечеть')}
             </label>
           </div>
           <textarea
@@ -93,7 +94,7 @@ export function ModerationActions({
             rows={2}
             autoFocus
             required
-            placeholder={pending.reasonPlaceholder}
+            placeholder={pending.reasonPlaceholder ? t(pending.reasonPlaceholder) : undefined}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -103,7 +104,7 @@ export function ModerationActions({
               className={`btn flex-1 sm:flex-none ${danger ? 'bg-[#B42318] text-white hover:bg-[#931B12] hover:text-white' : 'btn-white'}`}
               disabled={busy || !reason.trim()}
             >
-              {busy ? 'Сохраняем…' : (pending.confirmLabel ?? pending.label)}
+              {busy ? t('Сохраняем…') : t(pending.confirmLabel ?? pending.label)}
             </button>
             <button
               type="button"
@@ -114,7 +115,7 @@ export function ModerationActions({
               }}
               disabled={busy}
             >
-              Отмена
+              {t('Отмена')}
             </button>
           </div>
         </form>
@@ -129,7 +130,7 @@ export function ModerationActions({
               onClick={() => (a.needsReason ? setPending(a) : run(a))}
             >
               {a.tone === 'primary' && <IconCheck size={18} />}
-              {busy && running === a.key ? 'Сохраняем…' : a.label}
+              {busy && running === a.key ? t('Сохраняем…') : t(a.label)}
             </button>
           ))}
           {extra}
@@ -137,7 +138,7 @@ export function ModerationActions({
       )}
       {error && (
         <p className="alert-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
@@ -146,10 +147,11 @@ export function ModerationActions({
 
 /** Ссылка на публичную страницу в ряду действий. */
 export function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+  const { t } = useI18n();
   return (
     <Link href={href} target="_blank" rel="noopener noreferrer" className="btn btn-ghost px-4 flex-1 sm:flex-none">
       {children}
-      <span className="sr-only"> (откроется в новой вкладке)</span>
+      <span className="sr-only"> {t('(откроется в новой вкладке)')}</span>
       <span aria-hidden="true">↗</span>
     </Link>
   );
@@ -176,16 +178,17 @@ export function ModerationLayout({
 }) {
   const href = (t: Tab) => (t.value ? `${base}?status=${t.value}` : base);
   const labelId = `status-${base.replace(/\W+/g, '-')}`;
+  const { t: tr } = useI18n();
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[268px_minmax(0,1fr)] lg:items-start">
       <aside className="panel min-w-0 flex flex-col gap-4 lg:gap-[18px] lg:sticky lg:top-20">
         {search && (
           <label className="input flex items-center gap-2.5 text-muted cursor-text focus-within:border-accent-700">
             <IconSearch size={18} className="shrink-0" />
-            <span className="sr-only">{search.label}</span>
+            <span className="sr-only">{tr(search.label)}</span>
             <input
               type="search"
-              placeholder={search.placeholder}
+              placeholder={tr(search.placeholder)}
               value={search.value}
               onChange={(e) => search.onChange(e.target.value)}
               className="flex-1 min-w-0 h-full border-0 p-0 bg-transparent text-base text-ink focus:ring-0 focus:outline-none focus-visible:outline-none"
@@ -194,7 +197,7 @@ export function ModerationLayout({
         )}
         <div>
           <p className="overtitle" id={labelId}>
-            Статус
+            {tr('Статус')}
           </p>
           {/* Телефон и планшет: чипы с горизонтальной прокруткой */}
           <nav
@@ -210,7 +213,7 @@ export function ModerationLayout({
                   aria-current={active ? 'page' : undefined}
                   className="chip min-h-[44px] shrink-0"
                 >
-                  {t.label}
+                  {tr(t.label)}
                   {typeof t.count === 'number' && (
                     <span className={`tabular ${active ? '' : 'text-muted'}`}>{t.count}</span>
                   )}
@@ -238,7 +241,7 @@ export function ModerationLayout({
                     {active && <IconCheck size={14} strokeWidth={2.25} />}
                   </span>
                   <span className={`flex-1 text-sm leading-5 font-medium ${active ? 'text-accent-700' : ''}`}>
-                    {t.label}
+                    {tr(t.label)}
                   </span>
                   {typeof t.count === 'number' && <span className="caption tabular">{t.count}</span>}
                 </Link>
@@ -252,11 +255,23 @@ export function ModerationLayout({
   );
 }
 
-/** Заголовок страницы: title 24/30, подзаголовок и сводка справа (как в 9d). */
-export function AdminTitle({ children, sub, aside }: { children: ReactNode; sub?: ReactNode; aside?: ReactNode }) {
+/** Шапка страницы как в 12b: подпись раздела, заголовок 24/30, подзаголовок и сводка справа. */
+export function AdminTitle({
+  children,
+  sub,
+  aside,
+  over,
+}: {
+  children: ReactNode;
+  sub?: ReactNode;
+  aside?: ReactNode;
+  /** Подпись над заголовком: «Очередь проверки», «Реестр», «Управление». */
+  over?: ReactNode;
+}) {
   return (
-    <header className="flex flex-wrap justify-between items-end gap-x-6 gap-y-1.5">
+    <header className="flex flex-wrap justify-between items-end gap-x-6 gap-y-1.5 lg:min-h-[76px] lg:pt-4">
       <div className="min-w-0">
+        {over && <p className="caption">{over}</p>}
         <h1 className="title">{children}</h1>
         {sub && <p className="body-text mt-1.5 max-w-[640px]">{sub}</p>}
       </div>
@@ -266,6 +281,7 @@ export function AdminTitle({ children, sub, aside }: { children: ReactNode; sub?
 }
 
 export function Notice({ text, onClose }: { text: string; onClose: () => void }) {
+  const { t } = useI18n();
   if (!text) return null;
   return (
     <div className="alert-success flex items-center justify-between gap-3 py-1 pr-1" role="status">
@@ -276,7 +292,7 @@ export function Notice({ text, onClose }: { text: string; onClose: () => void })
       <button
         type="button"
         onClick={onClose}
-        aria-label="Закрыть уведомление"
+        aria-label={t('Закрыть уведомление')}
         className="w-11 h-11 shrink-0 inline-flex items-center justify-center rounded-full hover:bg-white/60"
       >
         <IconClose size={18} />
@@ -287,9 +303,10 @@ export function Notice({ text, onClose }: { text: string; onClose: () => void })
 
 /** Строка «Найдено: N из M» при поиске. */
 export function FoundLine({ shown, total }: { shown: number; total: number }) {
+  const { t } = useI18n();
   return (
     <p className="caption px-1" role="status">
-      Найдено: {shown} из {total}
+      {t('Найдено: {shown} из {total}', { shown, total })}
     </p>
   );
 }
@@ -327,7 +344,8 @@ export const REPORT_BADGE: Record<Report['status'], { label: string; tone: Tone 
 };
 
 export function StatusBadge({ status }: { status: { label: string; tone: Tone } }) {
-  return <span className={`${TONE[status.tone]} shrink-0`}>{status.label}</span>;
+  const { t } = useI18n();
+  return <span className={`${TONE[status.tone]} shrink-0`}>{t(status.label)}</span>;
 }
 
 /* ---------- Карточка модерации ---------- */
@@ -368,6 +386,7 @@ type KvItem = { label: string; value: ReactNode };
 
 /** Строки «ключ — значение» на плитке; на вебе — в две колонки. */
 export function KvGrid({ items }: { items: KvItem[] }) {
+  const { t } = useI18n();
   const half = Math.ceil(items.length / 2);
   const cols = items.length > 2 ? [items.slice(0, half), items.slice(half)] : [items];
   return (
@@ -376,7 +395,7 @@ export function KvGrid({ items }: { items: KvItem[] }) {
         <dl key={i} className="kv">
           {col.map((it) => (
             <div key={it.label}>
-              <dt className="text-body shrink-0">{it.label}</dt>
+              <dt className="text-body shrink-0">{t(it.label)}</dt>
               <dd className="font-medium text-ink text-right min-w-0 break-words">{it.value}</dd>
             </div>
           ))}
@@ -387,10 +406,11 @@ export function KvGrid({ items }: { items: KvItem[] }) {
 }
 
 export function DecisionNote({ note, label = 'Решение Комитета' }: { note?: string; label?: string }) {
+  const { t } = useI18n();
   if (!note) return null;
   return (
     <div className="tile">
-      <p className="overtitle">{label}</p>
+      <p className="overtitle">{t(label)}</p>
       <p className="mt-1 text-sm leading-5 text-ink break-words">«{note}»</p>
     </div>
   );
@@ -399,8 +419,9 @@ export function DecisionNote({ note, label = 'Решение Комитета' }
 /* ---------- Состояния списка ---------- */
 
 export function ListSkeleton() {
+  const { t } = useI18n();
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Загрузка">
+    <div className="flex flex-col gap-3" aria-busy="true" aria-label={t('Загрузка')}>
       {[0, 1].map((i) => (
         <div key={i} className="panel flex flex-col gap-4">
           <div className="skeleton h-5 w-2/3" />
@@ -411,14 +432,6 @@ export function ListSkeleton() {
       ))}
     </div>
   );
-}
-
-/** «сегодня», «вчера», «3 дня назад» — по календарю Душанбе. */
-export function daysAgo(iso: string) {
-  const days = Math.round((Date.parse(toDateInput(new Date().toISOString())) - Date.parse(toDateInput(iso))) / 86_400_000);
-  if (days <= 0) return 'сегодня';
-  if (days === 1) return 'вчера';
-  return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`;
 }
 
 export const isPublic = (c?: Pick<Campaign, 'status'>) => c?.status === 'active' || c?.status === 'completed';

@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { IconHandHeart, IconLogout, IconMosque, IconSavob, IconSparkles } from '@/components/icons';
-import { ApiError, apiFetch, formatDate, formatMoney, initials, Transaction } from '@/lib/api';
+import { ApiError, apiFetch, initials, Transaction } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n/client';
 
 type Savob = { total_points: number; current_multiplier: number; current_event: string };
 
@@ -22,8 +23,6 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'completed', label: 'Сбор завершён' },
 ];
 
-const savobFmt = new Intl.NumberFormat('ru-RU');
-
 /** Подпись и стиль метки для строки истории: статус платежа важнее статуса сбора. */
 function rowStatus(d: Transaction): { label: string; cls: string } | null {
   if (d.status === 'pending') return { label: 'В обработке', cls: 'badge-warning' };
@@ -35,6 +34,7 @@ function rowStatus(d: Transaction): { label: string; cls: string } | null {
 
 export default function ProfilePage() {
   const { user, token, ready, logout } = useAuth();
+  const { t, fmt } = useI18n();
   const router = useRouter();
   const [savob, setSavob] = useState<Savob | null>(null);
   const [donations, setDonations] = useState<Transaction[] | null>(null);
@@ -68,9 +68,9 @@ export default function ProfilePage() {
   const shown = donations?.filter((d) => filter === 'all' || d.campaign?.status === filter) ?? [];
 
   const stats = [
-    { label: 'Пожертвовано', value: donations ? formatMoney(total) : '…', wide: true },
-    { label: 'Добрых дел', value: donations ? String(completed.length) : '…' },
-    { label: 'Мечетей', value: donations ? String(mosquesHelped) : '…' },
+    { label: t('Пожертвовано'), value: donations ? fmt.money(total) : '…', wide: true },
+    { label: t('Добрых дел'), value: donations ? String(completed.length) : '…' },
+    { label: t('Мечетей'), value: donations ? String(mosquesHelped) : '…' },
   ];
 
   return (
@@ -83,7 +83,7 @@ export default function ProfilePage() {
           {initials(user.full_name)}
         </span>
         <div className="min-w-0">
-          <p className="caption !text-[13px]">Ассалому алайкум,</p>
+          <p className="caption !text-[13px]">{t('Ассалому алайкум,')}</p>
           <h1 className="title break-words">{user.full_name}</h1>
           <p className="caption tabular">{user.phone_number}</p>
         </div>
@@ -91,7 +91,7 @@ export default function ProfilePage() {
 
       {error && (
         <p className="alert-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
 
@@ -99,19 +99,19 @@ export default function ProfilePage() {
         <section className="panel min-w-0 order-2 lg:order-1" aria-labelledby="history-title">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 id="history-title" className="title-sm">
-              Мои добрые дела
+              {t('Мои добрые дела')}
             </h2>
             {donations && donations.length > 0 && (
-              <div role="group" aria-label="Фильтр по статусу сбора" className="flex flex-wrap gap-1.5">
+              <div role="group" aria-label={t('Фильтр по статусу сбора')} className="flex flex-wrap gap-1.5">
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
                     type="button"
                     aria-pressed={filter === f.id}
                     onClick={() => setFilter(f.id)}
-                    className="chip min-h-[44px] sm:min-h-[36px]"
+                    className="chip min-h-[44px] lg:min-h-[36px]"
                   >
-                    {f.label}
+                    {t(f.label)}
                   </button>
                 ))}
               </div>
@@ -132,16 +132,16 @@ export default function ProfilePage() {
                 <span className="icon-round w-14 h-14">
                   <IconSavob size={24} />
                 </span>
-                <p className="title-sm">Пока нет пожертвований</p>
+                <p className="title-sm">{t('Пока нет пожертвований')}</p>
                 <p className="body-text max-w-[360px]">
-                  Выберите сбор — после пожертвования здесь появится история и Савоб.
+                  {t('Выберите сбор — после пожертвования здесь появится история и Савоб.')}
                 </p>
                 <Link href="/campaigns" className="btn btn-primary mt-2">
-                  Выбрать сбор
+                  {t('Выбрать сбор')}
                 </Link>
               </div>
             ) : shown.length === 0 ? (
-              <p className="body-text py-6 text-center">Нет пожертвований с таким статусом сбора.</p>
+              <p className="body-text py-6 text-center">{t('Нет пожертвований с таким статусом сбора.')}</p>
             ) : (
               <ul className="divide-y divide-line">
                 {shown.map((d) => {
@@ -157,10 +157,10 @@ export default function ProfilePage() {
                           href={`/campaigns/${d.campaign_id}`}
                           className="block truncate text-sm leading-5 font-medium text-ink group-hover:text-accent-700 after:absolute after:inset-0 after:content-['']"
                         >
-                          {d.campaign?.title ?? 'Сбор'}
+                          {d.campaign?.title ?? t('Сбор')}
                         </Link>
                         <p className="caption">
-                          {formatDate(d.created_at)}
+                          {fmt.date(d.created_at)}
                           {d.status === 'completed' && (
                             <span className="text-sec font-medium"> · +{d.savob_earned} Савоб</span>
                           )}
@@ -168,9 +168,9 @@ export default function ProfilePage() {
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[15px] leading-[21px] font-semibold text-ink tabular whitespace-nowrap">
-                          {formatMoney(d.amount)}
+                          {fmt.money(d.amount)}
                         </span>
-                        {st && <span className={`badge ${st.cls}`}>{st.label}</span>}
+                        {st && <span className={`badge ${st.cls}`}>{t(st.label)}</span>}
                       </div>
                     </li>
                   );
@@ -184,15 +184,18 @@ export default function ProfilePage() {
           <section className="panel" aria-labelledby="savob-title">
             <div className="flex items-center justify-between gap-2">
               <h2 id="savob-title" className="overtitle">
-                Мой Савоб · <span lang="ar">ثواب</span>
+                {t('Мой Савоб')} · <span lang="ar">ثواب</span>
               </h2>
               <IconSparkles size={20} className="text-sec" />
             </div>
-            <p className="num-lg mt-2 text-ink">{savob ? savobFmt.format(savob.total_points) : '…'}</p>
-            <p className="caption mt-0.5">Баллы духовной награды, без денежной ценности.</p>
+            <p className="num-lg mt-2 text-ink">{savob ? fmt.number(savob.total_points) : '…'}</p>
+            <p className="caption mt-0.5">{t('Баллы духовной награды, без денежной ценности.')}</p>
             {savob && savob.current_multiplier > 1 && (
               <p className="mt-3 rounded-xl bg-accent-100 px-3 py-2.5 text-[13px] leading-[18px] font-medium text-accent-700">
-                Сейчас {EVENT_LABELS[savob.current_event] ?? 'праздник'}: Савоб ×{savob.current_multiplier}
+                {t('Сейчас {event}: Савоб ×{n}', {
+                  event: t(EVENT_LABELS[savob.current_event] ?? 'праздник'),
+                  n: savob.current_multiplier,
+                })}
               </p>
             )}
             <div className="grid grid-cols-2 gap-2 mt-4">
@@ -208,7 +211,7 @@ export default function ProfilePage() {
           <section className="panel flex flex-col gap-2">
             <Link href="/cabinet" className="btn btn-secondary btn-block">
               <IconMosque size={18} />
-              Кабинет мечети
+              {t('Кабинет мечети')}
             </Link>
             <button
               type="button"
@@ -219,7 +222,7 @@ export default function ProfilePage() {
               }}
             >
               <IconLogout size={18} />
-              Выйти
+              {t('Выйти')}
             </button>
           </section>
         </aside>

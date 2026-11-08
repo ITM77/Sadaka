@@ -2,6 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch, User } from './api';
+import { useI18n } from './i18n/client';
 
 const TOKEN_KEY = 'sadaka_token';
 
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const { lang } = useI18n(); // язык, выбранный на сайте, сохраняем в профиле при регистрации
 
   useEffect(() => {
     const saved = readToken();
@@ -73,11 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accept(
         await apiFetch('/auth/register', {
           method: 'POST',
-          body: { full_name: fullName, phone_number: phone, password, language: 'ru' },
+          body: { full_name: fullName, phone_number: phone, password, language: lang },
         }),
       );
     },
-    [accept],
+    [accept, lang],
   );
 
   const logout = useCallback(() => {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"sadaka.tj/backend/middleware"
@@ -15,6 +16,11 @@ func (h *Handler) Router() *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.New()
+	// По умолчанию Gin верит X-Forwarded-For от кого угодно — тогда IP в журнале
+	// подделывается одним заголовком. Верим только явно заданным прокси.
+	if err := r.SetTrustedProxies(h.Cfg.TrustedProxies); err != nil {
+		panic("TRUSTED_PROXIES: " + err.Error())
+	}
 	r.Use(gin.Logger(), gin.Recovery(), middleware.CORS(h.Cfg.CORSOrigins))
 	r.NoRoute(func(c *gin.Context) { utils.NotFound(c, "маршрут не найден") })
 
@@ -30,8 +36,10 @@ func (h *Handler) Router() *gin.Engine {
 	api := r.Group("/api/v1")
 
 	// Публичные
-	api.POST("/auth/register", h.Register)
-	api.POST("/auth/login", h.Login)
+	// Ограничение попыток: подбор пароля упирается в 10 попыток за 15 минут.
+	loginLimit := middleware.RateLimit(10, 15*time.Minute)
+	api.POST("/auth/register", middleware.RateLimit(20, time.Hour), h.Register)
+	api.POST("/auth/login", loginLimit, h.Login)
 	api.GET("/mosques", h.ListMosques)
 	api.GET("/mosques/:id", h.GetMosque)
 	api.GET("/campaigns", h.ListCampaigns)
@@ -55,9 +63,11 @@ func (h *Handler) Router() *gin.Engine {
 	user.POST("/donations", h.CreateDonation)
 
 	// Комитет улемов
-	api.POST("/admin/auth/login", h.AdminLogin)
-	api.GET("/admin/invite/:token", h.GetInvite)
-	api.POST("/admin/invite/:token", h.AcceptInvite)
+	api.POST("/admin/auth/login", loginLimit, h.AdminLogin)
+	// Код приглашения — только в теле запроса: в адресе он попал бы в логи сервера и прокси.
+	inviteLimit := middleware.RateLimit(20, 15*time.Minute)
+	api.POST("/admin/invite/lookup", inviteLimit, h.GetInvite)
+	api.POST("/admin/invite/accept", inviteLimit, h.AcceptInvite)
 	// adminSession сверяет сотрудника с БД: отключённый доступ и смена роли действуют сразу.
 	admin := api.Group("/admin", middleware.Auth(h.Cfg.JWTSecret, utils.SubjectAdmin), h.adminSession)
 	anyAdmin := middleware.RequireAdminRole(models.AdminRoleSuperadmin, models.AdminRoleModerator, models.AdminRoleAnalyst)
@@ -68,6 +78,7 @@ func (h *Handler) Router() *gin.Engine {
 	admin.GET("/dashboard", anyAdmin, h.AdminDashboard)
 	admin.GET("/mosques", anyAdmin, h.AdminListMosques)
 	admin.GET("/mosques/:id/history", anyAdmin, h.AdminMosqueHistory)
+	admin.GET("/mosques/:id/campaigns", anyAdmin, h.AdminMosqueCampaigns)
 	admin.GET("/campaigns", anyAdmin, h.AdminListCampaigns)
 	admin.GET("/reports", anyAdmin, h.AdminListReports)
 

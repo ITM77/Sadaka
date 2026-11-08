@@ -1,12 +1,15 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { IconCheck, IconClose, IconMosque, IconSavob, IconShield } from '@/components/icons';
+import { getI18n } from '@/lib/i18n/server';
 
-export const metadata: Metadata = {
-  title: 'О проекте — Садака',
-  description:
-    'Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана показать, на что потрачены деньги.',
-};
+const DESCRIPTION =
+  'Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана показать, на что потрачены деньги.';
+
+export function generateMetadata(): Metadata {
+  const { t } = getI18n();
+  return { title: t('О проекте — Садака'), description: t(DESCRIPTION) };
+}
 
 const before = [
   'Пожертвования наличными без учёта',
@@ -48,50 +51,48 @@ const partners = [
 ];
 
 export default function About() {
+  const { t } = getI18n();
   return (
     <div className="page flex flex-col gap-3 md:gap-4">
       <section className="panel-lg flex flex-col gap-1.5">
         <p className="overtitle">
-          О проекте · <span lang="ar">صدقة</span>
+          {t('О проекте')} · <span lang="ar">صدقة</span>
         </p>
-        <h1 className="title">Традиция садақа — в цифровом формате</h1>
-        <p className="body-text max-w-[680px]">
-          Садака соединяет жертвователей и мечети Таджикистана. Комитет улемов одобряет каждый сбор, а мечеть обязана
-          показать, на что потрачены деньги.
-        </p>
+        <h1 className="title">{t('Традиция садақа — в цифровом формате')}</h1>
+        <p className="body-text max-w-[680px]">{t(DESCRIPTION)}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link href="/campaigns" className="btn btn-primary">
-            Выбрать сбор
+            {t('Выбрать сбор')}
           </Link>
           <Link href="/cabinet" className="btn btn-secondary">
-            Кабинет мечети
+            {t('Кабинет мечети')}
           </Link>
         </div>
       </section>
 
       <section className="panel" aria-labelledby="change-title">
         <h2 id="change-title" className="overtitle">
-          Зачем нужна платформа
+          {t('Зачем нужна платформа')}
         </h2>
         <div className="grid md:grid-cols-2 gap-2 mt-3">
           <div className="tile">
-            <h3 className="title-sm">Что мешало раньше</h3>
+            <h3 className="title-sm">{t('Что мешало раньше')}</h3>
             <ul className="mt-2 flex flex-col">
-              {before.map((t) => (
-                <li key={t} className="flex items-start gap-2.5 py-1.5 body-text">
+              {before.map((s) => (
+                <li key={s} className="flex items-start gap-2.5 py-1.5 body-text">
                   <IconClose size={18} className="text-muted shrink-0 mt-px" />
-                  {t}
+                  {t(s)}
                 </li>
               ))}
             </ul>
           </div>
           <div className="tile !bg-sec-soft">
-            <h3 className="title-sm">Что меняет Садака</h3>
+            <h3 className="title-sm">{t('Что меняет Садака')}</h3>
             <ul className="mt-2 flex flex-col">
-              {after.map((t) => (
-                <li key={t} className="flex items-start gap-2.5 py-1.5 text-sm leading-5 text-ink">
+              {after.map((s) => (
+                <li key={s} className="flex items-start gap-2.5 py-1.5 text-sm leading-5 text-ink">
                   <IconCheck size={18} className="text-sec shrink-0 mt-px" />
-                  {t}
+                  {t(s)}
                 </li>
               ))}
             </ul>
@@ -100,9 +101,9 @@ export default function About() {
       </section>
 
       <section className="panel" aria-labelledby="roles-title">
-        <p className="overtitle">Участники</p>
+        <p className="overtitle">{t('Участники')}</p>
         <h2 id="roles-title" className="title mt-1.5">
-          Три участника — одна система доверия
+          {t('Три участника — одна система доверия')}
         </h2>
         <div className="grid md:grid-cols-3 gap-2 mt-4">
           {roles.map((r) => (
@@ -110,23 +111,23 @@ export default function About() {
               <span aria-hidden="true" className="w-11 h-11 rounded-xl bg-white text-sec flex items-center justify-center">
                 {r.icon}
               </span>
-              <h3 className="title-sm">{r.title}</h3>
-              <p className="body-text">{r.text}</p>
+              <h3 className="title-sm">{t(r.title)}</h3>
+              <p className="body-text">{t(r.text)}</p>
             </article>
           ))}
         </div>
       </section>
 
       <section className="panel" aria-labelledby="partners-title">
-        <p className="overtitle">Партнёры</p>
+        <p className="overtitle">{t('Партнёры')}</p>
         <h2 id="partners-title" className="title-sm mt-1.5">
-          Платформа работает вместе с государственными и платёжными институтами страны
+          {t('Платформа работает вместе с государственными и платёжными институтами страны')}
         </h2>
         <dl className="kv mt-3">
           {partners.map((p) => (
             <div key={p.name} className="!flex-wrap !gap-x-3 !gap-y-0 py-2">
-              <dt className="font-medium text-ink">{p.name}</dt>
-              <dd className="text-body">{p.role}</dd>
+              <dt className="font-medium text-ink">{t(p.name)}</dt>
+              <dd className="text-body">{t(p.role)}</dd>
             </div>
           ))}
         </dl>

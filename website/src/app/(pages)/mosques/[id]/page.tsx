@@ -5,7 +5,8 @@ import CampaignCard from '@/components/CampaignCard';
 import ProgressBar from '@/components/ProgressBar';
 import { QrLink, ShareButton } from '@/components/donor/ShareLink';
 import { IconCheck, IconPhone, IconPin, IconQr, IconReport, IconShare, IconShield } from '@/components/icons';
-import { apiFetchOrNull, Campaign, formatDate, formatMoney, Mosque, plural, progress, Report } from '@/lib/api';
+import { apiFetchOrNull, Campaign, Mosque, progress, Report } from '@/lib/api';
+import { getI18n } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +15,13 @@ type Data = { mosque: Mosque; campaigns: Campaign[]; reports: Report[] };
 const load = (id: string) => apiFetchOrNull<Data>(`/mosques/${encodeURIComponent(id)}`);
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { t } = getI18n();
   const data = await load(params.id);
-  return { title: data ? `${data.mosque.name} — Садака` : 'Мечеть не найдена — Садака' };
+  return { title: data ? t('{name} — Садака', { name: data.mosque.name }) : t('Мечеть не найдена — Садака') };
 }
 
 export default async function MosquePage({ params }: { params: { id: string } }) {
+  const { t, fmt } = getI18n();
   const data = await load(params.id);
   if (!data) notFound();
   const { mosque, campaigns, reports } = data;
@@ -33,16 +36,16 @@ export default async function MosquePage({ params }: { params: { id: string } })
 
   return (
     <div className="page">
-      <nav aria-label="Навигация" className="caption !text-[13px] flex flex-wrap gap-x-1.5 pt-1 md:pt-0">
-        <Link href="/mosques" className="text-muted hover:text-accent-700">
-          Мечети
+      <nav aria-label={t('Навигация')} className="caption !text-[13px] flex flex-wrap items-center gap-x-1.5 pt-1 md:pt-0">
+        <Link href="/mosques" className="inline-flex items-center min-h-11 -my-3 text-muted hover:text-accent-700">
+          {t('Мечети')}
         </Link>
         {mosque.city && (
           <>
             <span aria-hidden="true">·</span>
             <Link
               href={`/mosques?city=${encodeURIComponent(mosque.city)}`}
-              className="text-muted hover:text-accent-700"
+              className="inline-flex items-center min-h-11 -my-3 text-muted hover:text-accent-700"
             >
               {mosque.city}
             </Link>
@@ -61,7 +64,7 @@ export default async function MosquePage({ params }: { params: { id: string } })
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photos[0]}
-                alt={`Мечеть: ${mosque.name}`}
+                alt={t('Мечеть: {name}', { name: mosque.name })}
                 className="w-full h-full object-cover rounded-card bg-white"
               />
               {photos.length >= 3 && (
@@ -71,7 +74,7 @@ export default async function MosquePage({ params }: { params: { id: string } })
                     <img
                       key={src + i}
                       src={src}
-                      alt={`${mosque.name}, фото ${i + 2}`}
+                      alt={t('{name}, фото {n}', { name: mosque.name, n: i + 2 })}
                       loading="lazy"
                       className="w-full h-full min-h-0 object-cover rounded-tile bg-white"
                     />
@@ -82,17 +85,17 @@ export default async function MosquePage({ params }: { params: { id: string } })
           )}
 
           {/* О мечети */}
-          <section aria-label="О мечети" className="panel">
+          <section aria-label={t('О мечети')} className="panel">
             <span className="badge badge-success min-h-[28px] px-2.5 text-[13px] gap-1.5">
               <IconShield size={14} strokeWidth={2.25} />
-              Проверена Комитетом улемов
+              {t('Проверена Комитетом улемов')}
             </span>
             {mosque.description && <p className="body-text mt-3 whitespace-pre-line">{mosque.description}</p>}
             <dl className="kv mt-3.5">
               <div>
                 <dt className="text-body inline-flex items-center gap-1.5 shrink-0">
                   <IconPin size={16} className="text-muted" />
-                  Адрес
+                  {t('Адрес')}
                 </dt>
                 <dd className="font-medium text-right min-w-0 py-2.5">
                   {mosque.address ? `${mosque.address}, ${mosque.city}` : mosque.city}
@@ -100,15 +103,15 @@ export default async function MosquePage({ params }: { params: { id: string } })
               </div>
               {mosque.imam_name && (
                 <div>
-                  <dt className="text-body">Имам</dt>
+                  <dt className="text-body">{t('Имам')}</dt>
                   <dd className="font-medium text-right">{mosque.imam_name}</dd>
                 </div>
               )}
               {mosque.phone && (
                 <div>
-                  <dt className="text-body">Телефон</dt>
+                  <dt className="text-body">{t('Телефон')}</dt>
                   <dd className="font-medium text-right">
-                    <a href={`tel:${mosque.phone}`} className="tabular">
+                    <a href={`tel:${mosque.phone}`} className="tabular inline-flex items-center min-h-11">
                       {mosque.phone}
                     </a>
                   </dd>
@@ -119,7 +122,7 @@ export default async function MosquePage({ params }: { params: { id: string } })
               {mosque.phone && (
                 <a href={`tel:${mosque.phone}`} className="btn btn-secondary flex-1 sm:flex-none">
                   <IconPhone size={18} />
-                  Позвонить
+                  {t('Позвонить')}
                 </a>
               )}
               <ShareButton
@@ -136,11 +139,11 @@ export default async function MosquePage({ params }: { params: { id: string } })
           {/* Сборы */}
           <section id="campaigns" aria-labelledby="mosque-campaigns" className="panel scroll-mt-20">
             <h2 id="mosque-campaigns" className="overtitle">
-              Идут сборы
+              {t('Идут сборы')}
             </h2>
             {active.length === 0 ? (
               <p className="body-text mt-3">
-                Сейчас нет активных кампаний. Мечеть может открыть новый сбор после одобрения Комитетом.
+                {t('Сейчас нет активных кампаний. Мечеть может открыть новый сбор после одобрения Комитетом.')}
               </p>
             ) : (
               <div className="grid gap-2 mt-3 sm:grid-cols-2">
@@ -151,7 +154,7 @@ export default async function MosquePage({ params }: { params: { id: string } })
             )}
             {completed.length > 0 && (
               <>
-                <h3 className="overtitle mt-5">Завершённые сборы</h3>
+                <h3 className="overtitle mt-5">{t('Завершённые сборы')}</h3>
                 <div className="grid gap-2 mt-3 sm:grid-cols-2">
                   {completed.map((c) => (
                     <CampaignCard key={c.id} campaign={c} showMosque={false} />
@@ -165,32 +168,32 @@ export default async function MosquePage({ params }: { params: { id: string } })
           <section aria-labelledby="mosque-reports" className="panel">
             <div className="flex flex-wrap justify-between items-center gap-2">
               <h2 id="mosque-reports" className="overtitle">
-                Отчёты об использовании средств
+                {t('Отчёты об использовании средств')}
               </h2>
               {completed.length > 0 &&
                 (awaiting === 0 ? (
                   <span className="badge badge-success">
                     <IconCheck size={14} strokeWidth={2.25} />
-                    Отчёты сданы
+                    {t('Отчёты сданы')}
                   </span>
                 ) : (
                   <span className="badge badge-warning">
-                    Ждём {awaiting} {plural(awaiting, ['отчёт', 'отчёта', 'отчётов'])}
+                    {t('Ждём {n} {what}', { n: awaiting, what: fmt.plural(awaiting, ['отчёт', 'отчёта', 'отчётов']) })}
                   </span>
                 ))}
             </div>
             <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-              <StatTile label="Собрано за всё время" value={formatMoney(raised)} />
-              <StatTile label="Завершено сборов" value={String(completed.length)} />
+              <StatTile label={t('Собрано за всё время')} value={fmt.money(raised)} />
+              <StatTile label={t('Завершено сборов')} value={String(completed.length)} />
               <StatTile
-                label="Отчётов опубликовано"
-                value={`${completed.length - awaiting} из ${completed.length}`}
+                label={t('Отчётов опубликовано')}
+                value={t('{done} из {all}', { done: completed.length - awaiting, all: completed.length })}
                 wide
               />
             </dl>
 
             {reports.length === 0 ? (
-              <p className="body-text mt-3">Отчётов пока нет — они появляются после завершения сборов.</p>
+              <p className="body-text mt-3">{t('Отчётов пока нет — они появляются после завершения сборов.')}</p>
             ) : (
               <ul className="mt-1.5">
                 {reports.map((r) => {
@@ -211,13 +214,16 @@ export default async function MosquePage({ params }: { params: { id: string } })
                           </span>
                           <span className="block caption">
                             {campaign ? `${campaign.title} · ` : ''}
-                            {formatDate(r.submitted_at)} · собрано {formatMoney(r.total_collected)} · потрачено{' '}
-                            {formatMoney(r.total_spent)}
+                            {t('{date} · собрано {collected} · потрачено {spent}', {
+                              date: fmt.date(r.submitted_at),
+                              collected: fmt.money(r.total_collected),
+                              spent: fmt.money(r.total_spent),
+                            })}
                           </span>
                         </span>
                         <span className={approved ? 'badge badge-success' : 'badge badge-warning'}>
                           {approved && <IconCheck size={14} strokeWidth={2.25} />}
-                          {approved ? 'Проверен Комитетом' : 'На проверке'}
+                          {approved ? t('Проверен Комитетом') : t('На проверке')}
                         </span>
                       </Link>
                     </li>
@@ -225,15 +231,17 @@ export default async function MosquePage({ params }: { params: { id: string } })
                 })}
               </ul>
             )}
-            <p className="caption mt-2">Мечеть отчитывается по каждому сбору. Без отчёта новый сбор не открывается.</p>
+            <p className="caption mt-2">
+              {t('Мечеть отчитывается по каждому сбору. Без отчёта новый сбор не открывается.')}
+            </p>
           </section>
         </div>
 
         {/* ---------- Правая колонка ---------- */}
-        <aside className="aside-sticky flex flex-col gap-3 min-w-0" aria-label="Пожертвовать мечети">
+        <aside className="aside-sticky flex flex-col gap-3 min-w-0" aria-label={t('Пожертвовать мечети')}>
           {featured ? (
             <section aria-labelledby="featured-title" className="hidden lg:block panel">
-              <p className="overtitle">Идёт сбор</p>
+              <p className="overtitle">{t('Идёт сбор')}</p>
               <h2 id="featured-title" className="title-sm mt-2.5">
                 {featured.title}
               </h2>
@@ -242,23 +250,25 @@ export default async function MosquePage({ params }: { params: { id: string } })
               </div>
               <p className="flex justify-between gap-2 mt-2 text-[13px] leading-[18px] font-medium tabular">
                 <span className="whitespace-nowrap">
-                  {formatMoney(featured.current_amount)} · {progress(featured)}%
+                  {fmt.money(featured.current_amount)} · {progress(featured)}%
                 </span>
-                <span className="font-normal text-body whitespace-nowrap">из {formatMoney(featured.goal_amount)}</span>
+                <span className="font-normal text-body whitespace-nowrap">
+                  {t('из {sum}', { sum: fmt.money(featured.goal_amount) })}
+                </span>
               </p>
               <Link href={`/campaigns/${featured.id}#donate`} className="btn btn-primary btn-lg btn-block mt-4">
-                Пожертвовать
+                {t('Пожертвовать')}
               </Link>
               {active.length > 1 && (
                 <a href="#campaigns" className="link-action flex justify-center items-center min-h-11 mt-1">
-                  Ещё {active.length - 1} {plural(active.length - 1, ['сбор', 'сбора', 'сборов'])}
+                  {t('Ещё {n} {what}', { n: active.length - 1, what: fmt.plural(active.length - 1, ['сбор', 'сбора', 'сборов']) })}
                 </a>
               )}
             </section>
           ) : (
             <section className="hidden lg:block panel">
-              <p className="overtitle">Сборы</p>
-              <p className="body-text mt-2">Сейчас у мечети нет активных сборов.</p>
+              <p className="overtitle">{t('Сборы')}</p>
+              <p className="body-text mt-2">{t('Сейчас у мечети нет активных сборов.')}</p>
             </section>
           )}
 
@@ -268,18 +278,18 @@ export default async function MosquePage({ params }: { params: { id: string } })
                 <IconQr />
               </span>
               <h2 id="qr-title" className="title-sm">
-                Ссылка для QR-кода
+                {t('Ссылка для QR-кода')}
               </h2>
             </div>
             <p className="body-text mt-3 mb-3">
-              Сделайте QR-код с этой ссылкой и повесьте у входа — прихожане откроют страницу мечети камерой телефона.
+              {t('Сделайте QR-код с этой ссылкой и повесьте у входа — прихожане откроют страницу мечети камерой телефона.')}
             </p>
             <QrLink path={path} />
           </section>
 
           <div className="infobox">
             <IconShield size={18} className="shrink-0 mt-px" />
-            <span>Пожертвование идёт на сбор этой мечети. Комитет улемов проверяет сборы и отчёты.</span>
+            <span>{t('Пожертвование идёт на сбор этой мечети. Комитет улемов проверяет сборы и отчёты.')}</span>
           </div>
         </aside>
       </div>
@@ -291,7 +301,7 @@ export default async function MosquePage({ params }: { params: { id: string } })
             href={`/campaigns/${featured.id}#donate`}
             className="btn btn-primary btn-lg btn-block flex max-w-[480px] mx-auto"
           >
-            Пожертвовать
+            {t('Пожертвовать')}
           </Link>
         </div>
       )}

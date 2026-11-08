@@ -3,14 +3,18 @@ import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import MosqueRow from '@/components/donor/MosqueRow';
 import { IconCheck, IconSearch } from '@/components/icons';
-import { apiFetch, Campaign, Mosque, plural } from '@/lib/api';
+import { apiFetch, Campaign, Mosque } from '@/lib/api';
+import { getI18n } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Мечети — Садака',
-  description: 'Найдите мечеть и поддержите её кампании через платформу Садака.',
-};
+export function generateMetadata(): Metadata {
+  const { t } = getI18n();
+  return {
+    title: t('Мечети — Садака'),
+    description: t('Найдите мечеть и поддержите её кампании через платформу Садака.'),
+  };
+}
 
 type List = { mosques: Mosque[]; total: number };
 
@@ -24,6 +28,7 @@ export default async function Mosques({
 }: {
   searchParams: { q?: string; city?: string; status?: string };
 }) {
+  const { t, fmt } = getI18n();
   const q = (searchParams.q ?? '').trim();
   const city = (searchParams.city ?? '').trim();
   const status = searchParams.status === 'active' ? 'active' : '';
@@ -74,10 +79,12 @@ export default async function Mosques({
   return (
     <div className="page flex flex-col gap-3 lg:gap-4">
       <header className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between md:gap-4 pt-1 md:pt-0">
-        <h1 className="title">Мечети</h1>
+        <h1 className="title">{t('Мечети')}</h1>
         <p className="body-text">
-          {allCount} {plural(allCount, ['мечеть проверена', 'мечети проверены', 'мечетей проверены'])} Комитетом
-          улемов
+          {t('{n} {verified} Комитетом улемов', {
+            n: allCount,
+            verified: fmt.plural(allCount, ['мечеть проверена', 'мечети проверены', 'мечетей проверены']),
+          })}
         </p>
       </header>
 
@@ -86,20 +93,20 @@ export default async function Mosques({
         <form role="search" action="/mosques" className="flex gap-2">
           {hidden}
           <label className="relative flex-1 min-w-0">
-            <span className="sr-only">Название мечети</span>
+            <span className="sr-only">{t('Название мечети')}</span>
             <IconSearch
               size={18}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
             />
-            <input type="search" name="q" defaultValue={q} placeholder="Название мечети" className="input-white pl-10" />
+            <input type="search" name="q" defaultValue={q} placeholder={t('Название мечети')} className="input-white pl-10" />
           </label>
           <button type="submit" className="btn btn-primary px-5">
-            Найти
+            {t('Найти')}
           </button>
         </form>
         {cities.length > 0 && (
           <nav
-            aria-label="Город"
+            aria-label={t('Город')}
             className="flex gap-1.5 overflow-x-auto -mx-4 px-4 md:-mx-8 md:px-8 [scrollbar-width:none]"
           >
             <Link
@@ -107,7 +114,7 @@ export default async function Mosques({
               aria-current={!selectedCity ? 'page' : undefined}
               className="chip-white min-h-11 shrink-0"
             >
-              Все города
+              {t('Все города')}
             </Link>
             {cities.map((c) => (
               <Link
@@ -121,15 +128,15 @@ export default async function Mosques({
             ))}
           </nav>
         )}
-        <nav aria-label="Статус" className="segmented bg-white">
+        <nav aria-label={t('Статус')} className="segmented bg-white">
           {STATUSES.map((s) => (
             <Link
               key={s.id}
               href={hrefFor({ status: s.id })}
               aria-current={status === s.id ? 'page' : undefined}
-              className="hover:text-accent-700 aria-[current=page]:!bg-app"
+              className="!min-h-11 hover:text-accent-700 aria-[current=page]:!bg-app"
             >
-              {s.label}
+              {t(s.label)}
             </Link>
           ))}
         </nav>
@@ -137,30 +144,30 @@ export default async function Mosques({
 
       <div className="grid gap-4 lg:grid-cols-[268px_minmax(0,1fr)] lg:items-start">
         {/* Компьютер: колонка фильтров 268px */}
-        <aside aria-label="Фильтры" className="hidden lg:flex panel flex-col gap-[18px] lg:sticky lg:top-20">
+        <aside aria-label={t('Фильтры')} className="hidden lg:flex panel flex-col gap-[18px] lg:sticky lg:top-20">
           <form role="search" action="/mosques" className="flex flex-col gap-2">
             {hidden}
             <label className="relative">
-              <span className="sr-only">Название мечети</span>
+              <span className="sr-only">{t('Название мечети')}</span>
               <IconSearch
                 size={18}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
               />
-              <input type="search" name="q" defaultValue={q} placeholder="Поиск" className="input pl-10" />
+              <input type="search" name="q" defaultValue={q} placeholder={t('Поиск')} className="input pl-10" />
             </label>
             <button type="submit" className="btn btn-primary btn-block">
-              Найти
+              {t('Найти')}
             </button>
           </form>
 
           {cities.length > 0 && (
             <nav aria-labelledby="filter-city">
               <h2 id="filter-city" className="overtitle">
-                Город
+                {t('Город')}
               </h2>
               <ul className="mt-2">
                 <li>
-                  <CityLink href={hrefFor({ city: '' })} on={!selectedCity} label="Все города" count={allCount} />
+                  <CityLink href={hrefFor({ city: '' })} on={!selectedCity} label={t('Все города')} count={allCount} />
                 </li>
                 {cities.map((c) => (
                   <li key={c}>
@@ -173,7 +180,7 @@ export default async function Mosques({
 
           <nav aria-labelledby="filter-status">
             <h2 id="filter-status" className="overtitle">
-              Статус
+              {t('Статус')}
             </h2>
             <div className="segmented mt-2">
               {STATUSES.map((s) => (
@@ -183,7 +190,7 @@ export default async function Mosques({
                   aria-current={status === s.id ? 'page' : undefined}
                   className="!px-2 !text-sm hover:text-accent-700"
                 >
-                  {s.label}
+                  {t(s.label)}
                 </Link>
               ))}
             </div>
@@ -193,24 +200,24 @@ export default async function Mosques({
         {/* Список */}
         <div className="flex flex-col gap-2 min-w-0">
           {mosques.length === 0 ? (
-            <EmptyState icon={<IconSearch />} title={filtered ? 'Мечеть не найдена' : 'Пока нет одобренных мечетей'}>
+            <EmptyState icon={<IconSearch />} title={filtered ? t('Мечеть не найдена') : t('Пока нет одобренных мечетей')}>
               {filtered ? (
                 <>
-                  Измените название или город.{' '}
+                  {t('Измените название или город.')}{' '}
                   <Link href="/mosques" className="link-action">
-                    Сбросить поиск
+                    {t('Сбросить поиск')}
                   </Link>
                 </>
               ) : (
-                'Мечети появятся здесь после одобрения Комитетом улемов.'
+                t('Мечети появятся здесь после одобрения Комитетом улемов.')
               )}
             </EmptyState>
           ) : (
             <>
               <p className="caption !text-body px-1" aria-live="polite">
-                Найдено {total} {plural(total, ['мечеть', 'мечети', 'мечетей'])}
+                {t('Найдено {n} {what}', { n: total, what: fmt.plural(total, ['мечеть', 'мечети', 'мечетей']) })}
               </p>
-              <section aria-label="Мечети" className="bg-white rounded-card px-4 py-1 lg:px-5">
+              <section aria-label={t('Мечети')} className="bg-white rounded-card px-4 py-1 lg:px-5">
                 {mosques.map((m) => (
                   <MosqueRow key={m.id} mosque={m} hasActive={activeIds.has(m.id)} large />
                 ))}
@@ -221,12 +228,14 @@ export default async function Mosques({
           <section aria-labelledby="add-mosque" className="panel mt-1 flex flex-wrap gap-3 items-center justify-between">
             <div className="flex-[1_1_320px] min-w-0">
               <h2 id="add-mosque" className="title-sm">
-                Вашей мечети нет в списке?
+                {t('Вашей мечети нет в списке?')}
               </h2>
-              <p className="body-text mt-1">Подайте заявку — Комитет улемов проверит её, и вы сможете открывать сборы.</p>
+              <p className="body-text mt-1">
+                {t('Подайте заявку — Комитет улемов проверит её, и вы сможете открывать сборы.')}
+              </p>
             </div>
             <Link href="/cabinet/mosques/new" className="btn btn-secondary max-sm:w-full">
-              Подать заявку
+              {t('Подать заявку')}
             </Link>
           </section>
         </div>

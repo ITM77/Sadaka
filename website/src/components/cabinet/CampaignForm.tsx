@@ -3,8 +3,9 @@
 import { FormEvent, useState } from 'react';
 import ProgressBar from '@/components/ProgressBar';
 import { IconInfo } from '@/components/icons';
-import { ApiError, apiFetch, Campaign, CATEGORY_LABELS, formatMoney, Mosque, plural } from '@/lib/api';
+import { ApiError, apiFetch, Campaign, CATEGORY_LABELS, Mosque } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n/client';
 import { endToDateInput, toDateInput, todayInput } from '@/lib/cabinet';
 import { Field, FormCard, FormError, StickyAction } from './ui';
 
@@ -21,6 +22,7 @@ export default function CampaignForm({
   onSaved: (c: Campaign) => void;
 }) {
   const { token } = useAuth();
+  const { t, fmt } = useI18n();
   const [title, setTitle] = useState(campaign?.title ?? '');
   const [description, setDescription] = useState(campaign?.description ?? '');
   const [category, setCategory] = useState(campaign?.category ?? 'repairs');
@@ -73,8 +75,8 @@ export default function CampaignForm({
   return (
     <div className="layout-aside">
       <form id="campaign-form" onSubmit={onSubmit} className="min-w-0 flex flex-col gap-3">
-        <FormCard title="Описание">
-          <Field id="c-title" label="Название сбора">
+        <FormCard title={t('Описание')}>
+          <Field id="c-title" label={t('Название сбора')}>
             <input
               id="c-title"
               className="input"
@@ -85,7 +87,11 @@ export default function CampaignForm({
               placeholder="Таъмири бом"
             />
           </Field>
-          <Field id="c-desc" label="На что нужны деньги" hint="Пишите конкретно — жертвователи доверяют понятным целям.">
+          <Field
+            id="c-desc"
+            label={t('На что нужны деньги')}
+            hint={t('Пишите конкретно — жертвователи доверяют понятным целям.')}
+          >
             <textarea
               id="c-desc"
               className="input resize-y"
@@ -99,7 +105,7 @@ export default function CampaignForm({
 
         <section className="panel" aria-labelledby="c-cat-title">
           <h2 id="c-cat-title" className="overtitle">
-            Категория
+            {t('Категория')}
           </h2>
           <div role="radiogroup" aria-labelledby="c-cat-title" className="mt-3 flex flex-wrap gap-2">
             {categories.map(([id, label]) => (
@@ -109,19 +115,19 @@ export default function CampaignForm({
                 role="radio"
                 aria-checked={category === id}
                 onClick={() => setCategory(id)}
-                className="chip min-h-[44px] md:min-h-[36px]"
+                className="chip min-h-[44px] lg:min-h-[36px]"
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
         </section>
 
-        <FormCard title="Цель и сроки">
+        <FormCard title={t('Цель и сроки')}>
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="min-w-0">
               <label htmlFor="c-goal" className="label">
-                Цель
+                {t('Цель')}
               </label>
               <div className="flex items-center h-12 rounded-xl border-2 border-transparent bg-app transition-colors focus-within:border-accent-700">
                 <input
@@ -135,12 +141,12 @@ export default function CampaignForm({
                   aria-describedby="c-goal-cur"
                 />
                 <span id="c-goal-cur" className="pr-3.5 text-sm text-muted">
-                  сомони
+                  {t('сомони')}
                 </span>
               </div>
             </div>
             <div className="grid min-[400px]:grid-cols-2 sm:contents gap-4">
-              <Field id="c-start" label="Начало">
+              <Field id="c-start" label={t('Начало')}>
                 <input
                   id="c-start"
                   type="date"
@@ -150,7 +156,7 @@ export default function CampaignForm({
                   onChange={(e) => setStart(e.target.value)}
                 />
               </Field>
-              <Field id="c-end" label="Последний день">
+              <Field id="c-end" label={t('Последний день')}>
                 <input
                   id="c-end"
                   type="date"
@@ -165,19 +171,19 @@ export default function CampaignForm({
         </FormCard>
       </form>
 
-      <aside className="aside-sticky min-w-0 flex flex-col gap-3" aria-label="Предпросмотр и сохранение">
+      <aside className="aside-sticky min-w-0 flex flex-col gap-3" aria-label={t('Предпросмотр и сохранение')}>
         <section className="panel">
-          <h2 className="overtitle">Так увидят жертвователи</h2>
+          <h2 className="overtitle">{t('Так увидят жертвователи')}</h2>
           <div className="tile mt-3 flex flex-col gap-2" aria-hidden="true">
             <div className="flex items-center justify-between gap-2">
-              <span className="badge badge-sec">{CATEGORY_LABELS[category] ?? category}</span>
+              <span className="badge badge-sec">{t(CATEGORY_LABELS[category] ?? category)}</span>
               {Number.isFinite(days) && days > 0 && (
                 <span className="caption tabular whitespace-nowrap">
-                  {days} {plural(days, ['день', 'дня', 'дней'])}
+                  {days} {fmt.plural(days, ['день', 'дня', 'дней'])}
                 </span>
               )}
             </div>
-            <p className="title-sm break-words">{title.trim() || 'Название сбора'}</p>
+            <p className="title-sm break-words">{title.trim() || t('Название сбора')}</p>
             {mosque && (
               <p className="text-xs leading-[17px] text-body">
                 {mosque.name} · {mosque.city}
@@ -185,9 +191,9 @@ export default function CampaignForm({
             )}
             <ProgressBar value={0} onTile />
             <div className="flex justify-between gap-3 text-[13px] leading-[18px] font-medium text-ink tabular">
-              <span className="whitespace-nowrap">{formatMoney(0)} · 0%</span>
+              <span className="whitespace-nowrap">{fmt.money(0)} · 0%</span>
               <span className="font-normal text-body whitespace-nowrap">
-                из {goalOk ? formatMoney(goalNum) : '— с.'}
+                {t('из {goal}', { goal: goalOk ? fmt.money(goalNum) : `— ${t('с.')}` })}
               </span>
             </div>
           </div>
@@ -196,21 +202,21 @@ export default function CampaignForm({
 
           {error && (
             <div className="mb-3">
-              <FormError>{error}</FormError>
+              <FormError>{t(error)}</FormError>
             </div>
           )}
           <StickyAction>
             <button type="submit" form="campaign-form" className="btn btn-primary btn-lg btn-block" disabled={busy}>
-              {busy ? 'Сохраняем…' : 'Сохранить черновик'}
+              {busy ? t('Сохраняем…') : t('Сохранить черновик')}
             </button>
           </StickyAction>
-          <p className="caption mt-2 text-center md:text-left">Черновик не виден жертвователям.</p>
+          <p className="caption mt-2 text-center md:text-left">{t('Черновик не виден жертвователям.')}</p>
         </section>
 
         <div className="infobox">
           <IconInfo size={18} className="shrink-0 mt-px" />
           <span>
-            После сохранения отправьте сбор на одобрение со страницы мечети. Комитет проверит цель и описание.
+            {t('После сохранения отправьте сбор на одобрение со страницы мечети. Комитет проверит цель и описание.')}
           </span>
         </div>
       </aside>

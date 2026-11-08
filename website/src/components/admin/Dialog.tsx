@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useId, useRef } from 'react';
 import { IconClose } from '@/components/icons';
+import { useI18n } from '@/lib/i18n/client';
 
 /**
  * Окно поверх панели на нативном <dialog>: фокус остаётся внутри, Esc закрывает.
@@ -28,6 +29,7 @@ export default function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const { t } = useI18n();
 
   useEffect(() => {
     const d = ref.current;
@@ -76,7 +78,7 @@ export default function Dialog({
               </h2>
               {sub && <p className="caption mt-1 break-words">{sub}</p>}
             </div>
-            <button type="button" onClick={onClose} className="btn-icon shrink-0 -mr-1.5" aria-label="Закрыть">
+            <button type="button" onClick={onClose} className="btn-icon shrink-0 -mr-1.5" aria-label={t('Закрыть')}>
               <IconClose size={20} />
             </button>
           </header>

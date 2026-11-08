@@ -1,3 +1,7 @@
+'use client';
+
+import { useI18n } from '@/lib/i18n/client';
+
 /** Прогресс «Стиля 2»: 6px, заливка sec. onTile — белая дорожка (для плитки #E9F1F0). */
 export default function ProgressBar({
   value,
@@ -10,6 +14,7 @@ export default function ProgressBar({
   size?: 'sm' | 'md' | 'lg';
   onTile?: boolean;
 }) {
+  const { t } = useI18n();
   const pct = Math.max(0, Math.min(100, value));
   const h = size === 'lg' ? 'h-2' : 'h-1.5';
   return (
@@ -19,7 +24,7 @@ export default function ProgressBar({
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={label ?? 'Собрано от цели'}
+      aria-label={t(label ?? 'Собрано от цели')}
     >
       <div className="progress-fill" style={{ width: `${pct}%` }} />
     </div>

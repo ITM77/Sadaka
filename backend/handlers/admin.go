@@ -4,8 +4,11 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -72,7 +75,60 @@ func (h *Handler) AdminDashboard(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, s)
+
+	// Возраст самой старой заявки в каждой очереди — с неё начинают день.
+	oldest := func(model any, col, status string) *time.Time {
+		var t *time.Time
+		if h.DB.Model(model).Where("status = ?", status).Select("MIN("+col+")").Scan(&t).Error != nil {
+			return nil
+		}
+		return t
+	}
+	unreported, err := h.unreportedList(20)
+	if err != nil {
+		utils.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"mosques_approved": s.MosquesApproved, "mosques_pending": s.MosquesPending, "mosques_blocked": s.MosquesBlocked,
+		"campaigns_active": s.CampaignsActive, "campaigns_pending": s.CampaignsPending, "reports_pending": s.ReportsPending,
+		"campaigns_without_report": s.UnreportedTotal, "users": s.Users, "donations": s.Donations,
+		"donations_total": s.DonationsTotal, "savob_distributed": s.SavobDistributed,
+		"oldest_mosque_pending":   oldest(&models.Mosque{}, "created_at", models.MosqueStatusPending),
+		"oldest_campaign_pending": oldest(&models.Campaign{}, "updated_at", models.CampaignStatusPendingApproval),
+		"oldest_report_pending":   oldest(&models.Report{}, "submitted_at", models.ReportStatusSubmitted),
+		"unreported":              unreported,
+	})
+}
+
+// unreportedItem — завершённый сбор без поданного или принятого отчёта («Нужен контроль»).
+type unreportedItem struct {
+	MosqueID      string     `json:"mosque_id"`
+	MosqueName    string     `json:"mosque_name"`
+	City          string     `json:"city"`
+	CampaignID    string     `json:"campaign_id"`
+	CampaignTitle string     `json:"campaign_title"`
+	CompletedAt   *time.Time `json:"completed_at"`
+	ReportStatus  string     `json:"report_status"`  // "" — отчёта нет, rejected — отклонён
+	ReportUpdated *time.Time `json:"report_updated"` // когда отклонили
+	PendingNew    bool       `json:"pending_new"`    // у мечети новый сбор ждёт решения
+}
+
+func (h *Handler) unreportedList(limit int) ([]unreportedItem, error) {
+	items := []unreportedItem{}
+	err := h.DB.Raw(`
+SELECT m.id AS mosque_id, m.name AS mosque_name, m.city, c.id AS campaign_id, c.title AS campaign_title,
+       COALESCE(c.completed_at, c.end_date) AS completed_at,
+       COALESCE(r.status, '') AS report_status, r.updated_at AS report_updated,
+       EXISTS (SELECT 1 FROM campaigns p WHERE p.mosque_id = m.id AND p.status = ?) AS pending_new
+FROM campaigns c
+JOIN mosques m ON m.id = c.mosque_id
+LEFT JOIN reports r ON r.campaign_id = c.id
+WHERE c.status = ? AND (r.id IS NULL OR r.status = ?)
+ORDER BY COALESCE(c.completed_at, c.end_date) ASC
+LIMIT ?`, models.CampaignStatusPendingApproval, models.CampaignStatusCompleted, models.ReportStatusRejected, limit).
+		Scan(&items).Error
+	return items, err
 }
 
 func firstErr(errs ...error) error {
@@ -86,24 +142,130 @@ func firstErr(errs ...error) error {
 
 // ---------- Мечети ----------
 
-// GET /admin/mosques?status=pending
+// adminMosque — мечеть со счётчиками для реестра.
+type adminMosque struct {
+	models.Mosque
+	ActiveCampaigns int64           `json:"active_campaigns"`
+	Unreported      int64           `json:"unreported_campaigns"`
+	ActiveCollected decimal.Decimal `json:"active_collected"`
+}
+
+// GET /admin/mosques?status=pending&city=&q=&order=asc — реестр и очередь заявок.
 func (h *Handler) AdminListMosques(c *gin.Context) {
 	p := pagination(c)
 	q := h.DB.Model(&models.Mosque{})
 	if st := c.Query("status"); st != "" {
 		q = q.Where("status = ?", st)
 	}
+	if city := strings.TrimSpace(c.Query("city")); city != "" {
+		q = q.Where("city = ?", city)
+	}
+	if s := strings.TrimSpace(c.Query("q")); s != "" {
+		like := "%" + escapeLike(s) + "%"
+		q = q.Where("(name ILIKE ? OR address ILIKE ? OR city ILIKE ? OR imam_name ILIKE ? OR phone ILIKE ?)",
+			like, like, like, like, like)
+	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		utils.InternalError(c, err)
 		return
 	}
+	order := "created_at DESC"
+	if c.Query("order") == "asc" {
+		order = "created_at ASC"
+	}
 	mosques := []models.Mosque{}
-	if err := p.apply(q.Order("created_at DESC")).Find(&mosques).Error; err != nil {
+	if err := p.apply(q.Order(order)).Find(&mosques).Error; err != nil {
 		utils.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"mosques": mosques, "total": total})
+	out, err := h.withMosqueStats(mosques)
+	if err != nil {
+		utils.InternalError(c, err)
+		return
+	}
+	var cities []string
+	if err := h.DB.Model(&models.Mosque{}).Distinct("city").Order("city").Pluck("city", &cities).Error; err != nil {
+		utils.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"mosques": out, "total": total, "cities": cities})
+}
+
+// withMosqueStats добавляет к мечетям число идущих сборов, собранное в них
+// и число завершённых сборов без отчёта — двумя групповыми запросами.
+func (h *Handler) withMosqueStats(mosques []models.Mosque) ([]adminMosque, error) {
+	out := make([]adminMosque, len(mosques))
+	if len(mosques) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, len(mosques))
+	for i, m := range mosques {
+		ids[i] = m.ID
+		out[i] = adminMosque{Mosque: m}
+	}
+	var active []struct {
+		MosqueID  uuid.UUID
+		N         int64
+		Collected decimal.Decimal
+	}
+	if err := h.DB.Model(&models.Campaign{}).Select("mosque_id, COUNT(*) AS n, COALESCE(SUM(current_amount),0) AS collected").
+		Where("mosque_id IN ? AND status = ?", ids, models.CampaignStatusActive).Group("mosque_id").Scan(&active).Error; err != nil {
+		return nil, err
+	}
+	var unrep []struct {
+		MosqueID uuid.UUID
+		N        int64
+	}
+	if err := h.DB.Model(&models.Campaign{}).Select("mosque_id, COUNT(*) AS n").
+		Where("mosque_id IN ?", ids).
+		Where("status = ? OR (status = ? AND end_date <= ?)", models.CampaignStatusCompleted, models.CampaignStatusActive, h.Now()).
+		Where("NOT EXISTS (SELECT 1 FROM reports r WHERE r.campaign_id = campaigns.id AND r.status IN ?)",
+			[]string{models.ReportStatusSubmitted, models.ReportStatusApproved}).
+		Group("mosque_id").Scan(&unrep).Error; err != nil {
+		return nil, err
+	}
+	idx := map[uuid.UUID]int{}
+	for i, m := range mosques {
+		idx[m.ID] = i
+	}
+	for _, a := range active {
+		out[idx[a.MosqueID]].ActiveCampaigns, out[idx[a.MosqueID]].ActiveCollected = a.N, a.Collected
+	}
+	for _, u := range unrep {
+		out[idx[u.MosqueID]].Unreported = u.N
+	}
+	return out, nil
+}
+
+// GET /admin/mosques/:id/campaigns — все сборы мечети и отчёты по ним
+// («Контекст мечети» в очереди сборов, блок блокировки в реестре).
+func (h *Handler) AdminMosqueCampaigns(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	var mosque models.Mosque
+	if err := h.DB.First(&mosque, "id = ?", id).Error; err != nil {
+		if isNotFound(err) {
+			utils.NotFound(c, "мечеть не найдена")
+			return
+		}
+		utils.InternalError(c, err)
+		return
+	}
+	campaigns := []models.Campaign{}
+	if err := h.DB.Where("mosque_id = ?", id).Order("created_at DESC").Find(&campaigns).Error; err != nil {
+		utils.InternalError(c, err)
+		return
+	}
+	reports := []models.Report{}
+	if err := h.DB.Select("id", "campaign_id", "status", "submitted_at", "updated_at").
+		Where("mosque_id = ?", id).Find(&reports).Error; err != nil {
+		utils.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"mosque": mosque, "campaigns": campaigns, "reports": reports})
 }
 
 // moderateMosque меняет статус мечети, если текущий статус в списке from.
@@ -179,7 +341,26 @@ func (h *Handler) AdminListCampaigns(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"campaigns": campaigns, "total": total})
+	// «Отчёты мечети» в очереди: сколько у мечети завершённых сборов без отчёта.
+	type row struct {
+		models.Campaign
+		MosqueUnreported int64 `json:"mosque_unreported"`
+	}
+	out := make([]row, len(campaigns))
+	cache := map[uuid.UUID]int64{}
+	for i, cmp := range campaigns {
+		n, seen := cache[cmp.MosqueID]
+		if !seen {
+			var err error
+			if n, err = h.countUnreportedCampaigns(h.DB, cmp.MosqueID); err != nil {
+				utils.InternalError(c, err)
+				return
+			}
+			cache[cmp.MosqueID] = n
+		}
+		out[i] = row{Campaign: cmp, MosqueUnreported: n}
+	}
+	c.JSON(http.StatusOK, gin.H{"campaigns": out, "total": total})
 }
 
 func (h *Handler) moderateCampaign(c *gin.Context, approve bool) {

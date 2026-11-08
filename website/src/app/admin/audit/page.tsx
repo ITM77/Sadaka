@@ -8,8 +8,9 @@ import { IconClock, IconClose, IconInfo, IconSearch } from '@/components/icons';
 import Dialog from '@/components/admin/Dialog';
 import NoAccess from '@/components/admin/NoAccess';
 import { AdminTitle, ListSkeleton } from '@/components/admin/Moderation';
-import { ApiError, plural } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { canManageStaff, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
+import { useI18n } from '@/lib/i18n/client';
 import {
   ACTION_GROUPS,
   actionOf,
@@ -17,8 +18,6 @@ import {
   deviceOf,
   downloadAuditCsv,
   dushanbeDate,
-  formatLong,
-  formatShort,
   OBJECT_TYPES,
   objectHref,
   objectOne,
@@ -91,6 +90,7 @@ function apiQuery(f: Filters) {
 
 function Journal() {
   const { call, token } = useAdmin();
+  const { t, fmt } = useI18n();
   const { filters, entryId, write } = useFilters();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
@@ -148,15 +148,15 @@ function Journal() {
     }
   };
 
-  const staffName = (id: string) => staff.find((s) => s.id === id)?.full_name ?? 'сотрудник';
+  const staffName = (id: string) => staff.find((s) => s.id === id)?.full_name ?? t('сотрудник');
   const chips: { key: keyof Filters; label: string }[] = [];
   if (filters.admin_id) chips.push({ key: 'admin_id', label: staffName(filters.admin_id) });
   if (filters.action)
-    chips.push({ key: 'action', label: ACTION_GROUPS.find((g) => g.value === filters.action)?.label ?? filters.action });
+    chips.push({ key: 'action', label: t(ACTION_GROUPS.find((g) => g.value === filters.action)?.label ?? filters.action) });
   if (filters.object_type)
-    chips.push({ key: 'object_type', label: OBJECT_TYPES.find((o) => o.value === filters.object_type)?.label ?? filters.object_type });
-  if (filters.from) chips.push({ key: 'from', label: `с ${filters.from.split('-').reverse().join('.')}` });
-  if (filters.to) chips.push({ key: 'to', label: `по ${filters.to.split('-').reverse().join('.')}` });
+    chips.push({ key: 'object_type', label: t(OBJECT_TYPES.find((o) => o.value === filters.object_type)?.label ?? filters.object_type) });
+  if (filters.from) chips.push({ key: 'from', label: t('с {date}', { date: filters.from.split('-').reverse().join('.') }) });
+  if (filters.to) chips.push({ key: 'to', label: t('по {date}', { date: filters.to.split('-').reverse().join('.') }) });
   if (filters.q) chips.push({ key: 'q', label: `«${filters.q}»` });
 
   const period = (days: number | null) =>
@@ -169,67 +169,68 @@ function Journal() {
   return (
     <div className="flex flex-col gap-4 md:gap-5">
       <AdminTitle
-        sub="Все решения сотрудников: кто, когда и с какой причиной. Записи нельзя изменить или удалить."
-        aside={entries ? `${total} ${plural(total, ['запись', 'записи', 'записей'])}` : undefined}
+        over={t('Управление')}
+        sub={t('Все решения сотрудников: кто, когда и с какой причиной. Записи нельзя изменить или удалить.')}
+        aside={entries ? `${fmt.number(total)} ${fmt.plural(total, ['запись', 'записи', 'записей'])}` : undefined}
       >
-        Журнал действий
+        {t('Журнал действий')}
       </AdminTitle>
 
-      <section className="panel flex flex-col gap-4" aria-label="Фильтры журнала">
+      <section className="panel flex flex-col gap-4" aria-label={t('Фильтры журнала')}>
         <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_150px_150px] gap-2">
           <Select
-            label="Сотрудник"
+            label={t('Сотрудник')}
             value={filters.admin_id}
             onChange={(v) => write({ admin_id: v })}
             options={staff.map((s) => ({ value: s.id, label: s.full_name }))}
-            all="Сотрудник: все"
+            all={t('Сотрудник: все')}
           />
           <Select
-            label="Действие"
+            label={t('Действие')}
             value={filters.action}
             onChange={(v) => write({ action: v })}
-            options={ACTION_GROUPS.map((g) => ({ value: g.value, label: g.label }))}
-            all="Действие: все"
+            options={ACTION_GROUPS.map((g) => ({ value: g.value, label: t(g.label) }))}
+            all={t('Действие: все')}
           />
           <Select
-            label="Объект"
+            label={t('Объект')}
             value={filters.object_type}
             onChange={(v) => write({ object_type: v })}
-            options={OBJECT_TYPES.map((o) => ({ value: o.value, label: o.label }))}
-            all="Объект: все"
+            options={OBJECT_TYPES.map((o) => ({ value: o.value, label: t(o.label) }))}
+            all={t('Объект: все')}
           />
-          <DateField label="с" value={filters.from} onChange={(v) => write({ from: v })} max={filters.to || undefined} />
-          <DateField label="по" value={filters.to} onChange={(v) => write({ to: v })} min={filters.from || undefined} />
+          <DateField label={t('с')} value={filters.from} onChange={(v) => write({ from: v })} max={filters.to || undefined} />
+          <DateField label={t('по')} value={filters.to} onChange={(v) => write({ to: v })} min={filters.from || undefined} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Быстрый период">
+          <div className="flex gap-1.5 flex-wrap" role="group" aria-label={t('Быстрый период')}>
             {[
               { d: 1, l: 'Сегодня' },
               { d: 7, l: '7 дней' },
               { d: 30, l: '30 дней' },
             ].map((p) => (
               <button key={p.d} type="button" className="chip min-h-[44px]" aria-pressed={activePeriod === p.d} onClick={() => period(p.d)}>
-                {p.l}
+                {t(p.l)}
               </button>
             ))}
           </div>
           <label className="input flex items-center gap-2.5 text-muted cursor-text focus-within:border-accent-700 flex-1 min-w-[220px] lg:max-w-[340px] lg:ml-auto">
             <IconSearch size={18} className="shrink-0" />
-            <span className="sr-only">Поиск в журнале</span>
+            <span className="sr-only">{t('Поиск в журнале')}</span>
             <input
               type="search"
-              placeholder="Объект, сотрудник или причина"
+              placeholder={t('Объект, сотрудник или причина')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 min-w-0 h-full border-0 p-0 bg-transparent text-base text-ink focus:ring-0 focus:outline-none focus-visible:outline-none"
             />
           </label>
           <button type="button" className="btn btn-secondary w-full sm:w-auto" onClick={() => setExporting(true)} disabled={!entries || total === 0}>
-            Скачать CSV
+            {t('Скачать CSV')}
           </button>
         </div>
         {chips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5" aria-label="Применённые фильтры">
+          <div className="flex flex-wrap items-center gap-1.5" aria-label={t('Применённые фильтры')}>
             {chips.map((c) => (
               <button
                 key={c.key}
@@ -239,7 +240,7 @@ function Journal() {
               >
                 {c.label}
                 <IconClose size={14} />
-                <span className="sr-only">— снять фильтр</span>
+                <span className="sr-only">— {t('снять фильтр')}</span>
               </button>
             ))}
             <button
@@ -247,24 +248,26 @@ function Journal() {
               className="btn btn-ghost btn-sm"
               onClick={() => write({ admin_id: '', action: '', object_type: '', from: '', to: '', q: '' })}
             >
-              Сбросить всё
+              {t('Сбросить всё')}
             </button>
           </div>
         )}
       </section>
 
-      <section className="panel flex flex-col gap-3" aria-label="Записи журнала">
+      <section className="panel flex flex-col gap-3" aria-label={t('Записи журнала')}>
         {error && (
           <p className="alert-error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {!entries && !error && <ListSkeleton />}
         {entries && entries.length === 0 && (
-          <EmptyState icon={<IconClock size={26} />} title={chips.length ? 'Ничего не нашлось' : 'Журнал пока пуст'}>
-            {chips.length
-              ? 'Попробуйте снять часть фильтров.'
-              : 'Здесь появятся решения по мечетям, сборам и отчётам и изменения сотрудников.'}
+          <EmptyState icon={<IconClock size={26} />} title={t(chips.length ? 'Ничего не нашлось' : 'Журнал пока пуст')}>
+            {t(
+              chips.length
+                ? 'Попробуйте снять часть фильтров.'
+                : 'Здесь появятся решения по мечетям, сборам и отчётам и изменения сотрудников.',
+            )}
           </EmptyState>
         )}
         {entries && entries.length > 0 && (
@@ -272,7 +275,7 @@ function Journal() {
             {/* Веб: таблица 12j */}
             <div className="hidden lg:block -mx-1">
               <table className="w-full text-sm leading-5 border-separate border-spacing-0 table-fixed">
-                <caption className="sr-only">Решения сотрудников, сначала новые</caption>
+                <caption className="sr-only">{t('Решения сотрудников, сначала новые')}</caption>
                 <colgroup>
                   <col className="w-[140px]" />
                   <col className="w-[180px]" />
@@ -284,7 +287,7 @@ function Journal() {
                   <tr className="text-left text-xs leading-4 text-body">
                     {['Время', 'Сотрудник', 'Действие', 'Объект', 'Причина'].map((h) => (
                       <th key={h} scope="col" className="font-medium px-3 py-2.5 border-b border-line">
-                        {h}
+                        {t(h)}
                       </th>
                     ))}
                   </tr>
@@ -298,8 +301,8 @@ function Journal() {
                           className="text-left tabular font-medium text-ink hover:text-accent-700 min-h-[32px]"
                           onClick={() => write({}, e.id)}
                         >
-                          {formatShort(e.created_at)}
-                          <span className="sr-only"> — открыть запись</span>
+                          {fmt.short(e.created_at)}
+                          <span className="sr-only"> — {t('открыть запись')}</span>
                         </button>
                       </td>
                       <td className="px-3 py-2.5 border-b border-line align-top text-ink break-words">{e.actor_name}</td>
@@ -311,7 +314,7 @@ function Journal() {
                           {e.object_title}
                         </Link>
                         <span className="block caption break-words">
-                          {objectOne(e.object_type)}
+                          {t(objectOne(e.object_type))}
                           {e.object_subtitle ? ` · ${e.object_subtitle}` : ''}
                         </span>
                       </td>
@@ -335,11 +338,11 @@ function Journal() {
                   >
                     <span className="flex items-start justify-between gap-2">
                       <ActionBadge code={e.action} />
-                      <span className="caption tabular whitespace-nowrap">{formatShort(e.created_at)}</span>
+                      <span className="caption tabular whitespace-nowrap">{fmt.short(e.created_at)}</span>
                     </span>
                     <span className="font-medium text-ink break-words">{e.object_title}</span>
                     <span className="caption break-words">
-                      {objectOne(e.object_type)}
+                      {t(objectOne(e.object_type))}
                       {e.object_subtitle ? ` · ${e.object_subtitle}` : ''} · {e.actor_name}
                     </span>
                     {e.reason && <span className="text-sm leading-5 text-body line-clamp-2 break-words">«{e.reason}»</span>}
@@ -350,7 +353,7 @@ function Journal() {
 
             {entries.length < total && (
               <button type="button" className="btn btn-secondary self-center" onClick={more} disabled={loadingMore}>
-                {loadingMore ? 'Загружаем…' : `Показать ещё · осталось ${total - entries.length}`}
+                {loadingMore ? t('Загружаем…') : t('Показать ещё · осталось {n}', { n: total - entries.length })}
               </button>
             )}
           </>
@@ -377,8 +380,9 @@ function Journal() {
 }
 
 function ActionBadge({ code }: { code: string }) {
+  const { t } = useI18n();
   const a = actionOf(code);
-  return <span className={`${TONE_CLASS[a.tone]} whitespace-normal`}>{a.label}</span>;
+  return <span className={`${TONE_CLASS[a.tone]} whitespace-normal`}>{t(a.label)}</span>;
 }
 
 function Select({
@@ -425,6 +429,7 @@ function DateField({
   min?: string;
   max?: string;
 }) {
+  const { t } = useI18n();
   return (
     <label className="input flex items-center gap-2 text-body focus-within:border-accent-700">
       <span className="text-sm shrink-0">{label}</span>
@@ -434,7 +439,7 @@ function DateField({
         min={min}
         max={max}
         onChange={(e) => onChange(e.target.value)}
-        aria-label={`Период ${label}`}
+        aria-label={t('Период {label}', { label })}
         className="flex-1 min-w-0 h-full border-0 p-0 bg-transparent text-[15px] text-ink focus:ring-0 focus:outline-none focus-visible:outline-none"
       />
     </label>
@@ -457,6 +462,7 @@ function EntryDrawer({
   onClose: () => void;
 }) {
   const { call } = useAdmin();
+  const { t, fmt } = useI18n();
   const [loaded, setLoaded] = useState<AuditEntry | null>(null);
   const [error, setError] = useState('');
 
@@ -482,75 +488,75 @@ function EntryDrawer({
       open={Boolean(id)}
       onClose={onClose}
       variant="drawer"
-      overtitle={position ? `Запись журнала · ${position} из ${total}` : 'Запись журнала'}
-      title={a?.label ?? 'Загрузка…'}
+      overtitle={position ? t('Запись журнала · {pos} из {n}', { pos: position, n: total }) : t('Запись журнала')}
+      title={a ? t(a.label) : t('Загрузка…')}
       sub={e ? `${e.object_title}${e.object_subtitle ? ` · ${e.object_subtitle}` : ''}` : undefined}
       footer={
         e ? (
           <Link href={objectHref(e)} className="btn btn-secondary flex-1">
-            Открыть объект
+            {t('Открыть объект')}
           </Link>
         ) : undefined
       }
     >
       {error && (
         <p className="alert-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {!e && !error && <div className="skeleton h-48 rounded-tile" aria-busy="true" />}
       {e && (
         <>
           <dl className="kv">
-            <Row label="Время">
-              <span className="tabular">{formatLong(e.created_at)}</span>
-              <span className="block caption font-normal">по Душанбе, UTC+5</span>
+            <Row label={t('Время')}>
+              <span className="tabular">{fmt.dateTimeSec(e.created_at)}</span>
+              <span className="block caption font-normal">{t('по Душанбе, UTC+5')}</span>
             </Row>
-            <Row label="Сотрудник">
+            <Row label={t('Сотрудник')}>
               {e.actor_name}
-              {e.actor_role && <span className="block caption font-normal">{ROLE_LABELS[e.actor_role]}</span>}
+              {e.actor_role && <span className="block caption font-normal">{t(ROLE_LABELS[e.actor_role])}</span>}
             </Row>
-            <Row label="Действие">
+            <Row label={t('Действие')}>
               <ActionBadge code={e.action} />
             </Row>
-            <Row label="Объект">
+            <Row label={t('Объект')}>
               {e.object_title}
               <span className="block caption font-normal">
-                {objectOne(e.object_type)}
+                {t(objectOne(e.object_type))}
                 {e.object_subtitle ? ` · ${e.object_subtitle}` : ''}
               </span>
             </Row>
             {(e.from_status || e.to_status) && (
-              <Row label={e.action === 'admin.role_change' || e.action === 'admin.invite' ? 'Роль' : 'Статус'}>
+              <Row label={t(e.action === 'admin.role_change' || e.action === 'admin.invite' ? 'Роль' : 'Статус')}>
                 {e.from_status && (
                   <>
-                    {statusLabel(e.object_type, e.from_status)}
+                    {t(statusLabel(e.object_type, e.from_status))}
                     <span aria-hidden="true" className="text-body font-normal"> → </span>
-                    <span className="sr-only"> стало </span>
+                    <span className="sr-only"> {t('стало')} </span>
                   </>
                 )}
-                {statusLabel(e.object_type, e.to_status)}
+                {t(statusLabel(e.object_type, e.to_status))}
               </Row>
             )}
-            {e.details && <Row label="Подробности">{e.details}</Row>}
+            {e.details && <Row label={t('Подробности')}>{t(e.details)}</Row>}
           </dl>
 
           {e.reason && (
             <section className="tile">
               <h3 className="overtitle">
-                Причина{e.object_type === 'admin' ? ' — видят суперадмины' : ' — её видит мечеть'}
+                {t(e.object_type === 'admin' ? 'Причина — видят суперадмины' : 'Причина — её видит мечеть')}
               </h3>
               <p className="mt-1 text-sm leading-5 text-ink whitespace-pre-line break-words">{e.reason}</p>
             </section>
           )}
 
           <section>
-            <h3 className="overtitle mb-1.5">Откуда выполнено</h3>
+            <h3 className="overtitle mb-1.5">{t('Откуда выполнено')}</h3>
             <dl className="kv">
-              <Row label="IP-адрес">
-                <span className="tabular">{e.ip || 'не записан'}</span>
+              <Row label={t('IP-адрес')}>
+                <span className="tabular">{e.ip || t('не записан')}</span>
               </Row>
-              <Row label="Устройство">{deviceOf(e.user_agent) || 'не записано'}</Row>
+              <Row label={t('Устройство')}>{deviceOf(e.user_agent) || t('не записано')}</Row>
             </dl>
           </section>
         </>
@@ -585,6 +591,7 @@ function ExportDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { t, fmt } = useI18n();
   useEffect(() => setError(''), [open]);
 
   const go = async () => {
@@ -605,34 +612,34 @@ function ExportDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Выгрузка журнала"
-      sub={chips.length ? `С текущими фильтрами: ${chips.join(' · ')}` : 'Весь журнал, без фильтров'}
+      title={t('Выгрузка журнала')}
+      sub={chips.length ? t('С текущими фильтрами: {list}', { list: chips.join(' · ') }) : t('Весь журнал, без фильтров')}
       footer={
         <>
           <button type="button" className="btn btn-primary flex-1 sm:flex-none" onClick={go} disabled={busy}>
-            {busy ? 'Готовим файл…' : 'Скачать CSV'}
+            {busy ? t('Готовим файл…') : t('Скачать CSV')}
           </button>
           <button type="button" className="btn btn-ghost flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
-            Отмена
+            {t('Отмена')}
           </button>
         </>
       }
     >
       <div className="tile">
-        <p className="font-medium text-ink">CSV · UTF-8, разделитель «;»</p>
-        <p className="caption mt-0.5">Сразу открывается в Excel и Google Таблицах.</p>
+        <p className="font-medium text-ink">{t('CSV · UTF-8, разделитель «;»')}</p>
+        <p className="caption mt-0.5">{t('Сразу открывается в Excel и Google Таблицах.')}</p>
       </div>
       <div className="infobox">
         <IconInfo size={18} className="shrink-0 mt-px" />
         <span>
-          В файле {n} {plural(n, ['запись', 'записи', 'записей'])}
-          {total > 10000 ? ' — первые 10 000, сузьте период, чтобы выгрузить остальное' : ''}. Столбцы: время, сотрудник,
-          роль, действие, объект, статус до и после, причина, IP.
+          {t('В файле {n} {word}', { n: fmt.number(n), word: fmt.plural(n, ['запись', 'записи', 'записей']) })}
+          {total > 10000 ? ` — ${t('первые 10 000, сузьте период, чтобы выгрузить остальное')}` : ''}.{' '}
+          {t('Столбцы: время, сотрудник, роль, действие, объект, статус до и после, причина, IP.')}
         </span>
       </div>
       {error && (
         <p className="alert-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </Dialog>

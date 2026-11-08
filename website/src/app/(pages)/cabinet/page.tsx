@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Alert, CabinetPage, Loading, MosqueStatusBadge, StatusBadge } from '@/components/cabinet/ui';
 import { IconChevronRight, IconInfo, IconMosque, IconPlus } from '@/components/icons';
-import { ApiError, apiFetch, formatMoney, Mosque } from '@/lib/api';
+import { ApiError, apiFetch, Mosque } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n/client';
 import { isEnded, MosqueCabinetData, needsReport } from '@/lib/cabinet';
 
 type Summary = { active: number; pending: number; collected: number; owing: number };
@@ -28,6 +29,7 @@ const STEPS = [
 
 export default function CabinetHome() {
   const { token } = useAuth();
+  const { t, fmt } = useI18n();
   const [mosques, setMosques] = useState<Mosque[] | null>(null);
   const [summaries, setSummaries] = useState<Record<string, Summary>>({});
   const [error, setError] = useState('');
@@ -53,20 +55,20 @@ export default function CabinetHome() {
 
   return (
     <CabinetPage
-      eyebrow="Кабинет мечети"
-      title="Мои мечети"
+      eyebrow={t('Кабинет мечети')}
+      title={t('Мои мечети')}
       actions={
         mosques && mosques.length > 0 ? (
           <Link href="/cabinet/mosques/new" className="btn btn-white">
             <IconPlus size={18} />
-            Ещё одна мечеть
+            {t('Ещё одна мечеть')}
           </Link>
         ) : undefined
       }
     >
       <div className="layout-aside">
         <div className="min-w-0 flex flex-col gap-3">
-          {error && <Alert>{error}</Alert>}
+          {error && <Alert>{t(error)}</Alert>}
           {!mosques && !error && <Loading />}
 
           {mosques && mosques.length === 0 && (
@@ -74,19 +76,20 @@ export default function CabinetHome() {
               <span className="icon-round w-14 h-14">
                 <IconMosque size={24} />
               </span>
-              <h2 className="title-sm">Вы ещё не зарегистрировали мечеть</h2>
+              <h2 className="title-sm">{t('Вы ещё не зарегистрировали мечеть')}</h2>
               <p className="body-text max-w-[420px]">
-                Подайте заявку — Комитет улемов проверит мечеть. После одобрения вы сможете открывать сборы и публиковать
-                отчёты.
+                {t(
+                  'Подайте заявку — Комитет улемов проверит мечеть. После одобрения вы сможете открывать сборы и публиковать отчёты.',
+                )}
               </p>
               <Link href="/cabinet/mosques/new" className="btn btn-primary mt-2">
-                Подать заявку
+                {t('Подать заявку')}
               </Link>
             </section>
           )}
 
           {mosques && mosques.length > 0 && (
-            <section className="panel !py-1" aria-label="Мечети">
+            <section className="panel !py-1" aria-label={t('Мечети')}>
               <ul className="divide-y divide-line">
                 {mosques.map((m) => {
                   const sum = summaries[m.id];
@@ -112,17 +115,20 @@ export default function CabinetHome() {
                           </span>
                           <span className="flex flex-wrap gap-1.5 mt-1">
                             <MosqueStatusBadge status={m.status} />
-                            {sum && sum.owing > 0 && <StatusBadge tone="wait">Нужен отчёт</StatusBadge>}
+                            {sum && sum.owing > 0 && <StatusBadge tone="wait">{t('Нужен отчёт')}</StatusBadge>}
                           </span>
                           {m.moderation_note && !approved && (
                             <span className="block text-[13px] leading-[18px] text-[#B42318]">
-                              <strong className="font-semibold">Комитет:</strong> {m.moderation_note}
+                              <strong className="font-semibold">{t('Комитет:')}</strong> {m.moderation_note}
                             </span>
                           )}
                           {sum && (
                             <span className="block caption tabular">
-                              Идёт сборов: {sum.active} · На одобрении: {sum.pending} · Собрано за всё время:{' '}
-                              <span className="font-medium text-ink whitespace-nowrap">{formatMoney(sum.collected)}</span>
+                              {t('Идёт сборов: {active} · На одобрении: {pending} · Собрано за всё время:', {
+                                active: sum.active,
+                                pending: sum.pending,
+                              })}{' '}
+                              <span className="font-medium text-ink whitespace-nowrap">{fmt.money(sum.collected)}</span>
                             </span>
                           )}
                         </span>
@@ -139,7 +145,7 @@ export default function CabinetHome() {
         <aside className="aside-sticky flex flex-col gap-3">
           <section className="panel" aria-labelledby="how-title">
             <h2 id="how-title" className="overtitle">
-              Как работает кабинет
+              {t('Как работает кабинет')}
             </h2>
             <ol className="mt-3 flex flex-col gap-2">
               {STEPS.map((s, i) => (
@@ -147,14 +153,14 @@ export default function CabinetHome() {
                   <span className="step-num !bg-white" aria-hidden="true">
                     {i + 1}
                   </span>
-                  <span className="text-sm leading-5 text-ink">{s}</span>
+                  <span className="text-sm leading-5 text-ink">{t(s)}</span>
                 </li>
               ))}
             </ol>
           </section>
           <div className="infobox">
             <IconInfo size={18} className="shrink-0 mt-px" />
-            <span>Нет отчёта — нет нового сбора. Отчёт по завершённому сбору открывает дорогу следующему.</span>
+            <span>{t('Нет отчёта — нет нового сбора. Отчёт по завершённому сбору открывает дорогу следующему.')}</span>
           </div>
         </aside>
       </div>

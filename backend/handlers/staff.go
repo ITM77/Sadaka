@@ -362,8 +362,7 @@ func hashToken(token string) string {
 }
 
 // inviteByToken находит сотрудника по действующей ссылке.
-func (h *Handler) inviteByToken(c *gin.Context, db *gorm.DB) (*models.Admin, bool) {
-	token := c.Param("token")
+func (h *Handler) inviteByToken(c *gin.Context, db *gorm.DB, token string) (*models.Admin, bool) {
 	if len(token) != 64 {
 		utils.NotFound(c, "ссылка недействительна")
 		return nil, false
@@ -388,9 +387,19 @@ func (h *Handler) inviteByToken(c *gin.Context, db *gorm.DB) (*models.Admin, boo
 	return &a, true
 }
 
-// GET /admin/invite/:token — кто пригласил и на какую роль.
+type inviteTokenRequest struct {
+	Token string `json:"token"`
+}
+
+// POST /admin/invite/lookup {token} — кто пригласил и на какую роль.
+// Код приходит в теле, а в браузере живёт после «#» в ссылке — так он не
+// попадает ни в логи сервера, ни в заголовок Referer.
 func (h *Handler) GetInvite(c *gin.Context) {
-	a, ok := h.inviteByToken(c, h.DB)
+	var req inviteTokenRequest
+	if !bind(c, &req) {
+		return
+	}
+	a, ok := h.inviteByToken(c, h.DB, req.Token)
 	if !ok {
 		return
 	}
@@ -408,10 +417,11 @@ func (h *Handler) GetInvite(c *gin.Context) {
 }
 
 type acceptInviteRequest struct {
+	Token    string `json:"token"`
 	Password string `json:"password"`
 }
 
-// POST /admin/invite/:token {password} — задать пароль и сразу войти.
+// POST /admin/invite/accept {token, password} — задать пароль и сразу войти.
 func (h *Handler) AcceptInvite(c *gin.Context) {
 	var req acceptInviteRequest
 	if !bind(c, &req) {
@@ -429,7 +439,7 @@ func (h *Handler) AcceptInvite(c *gin.Context) {
 	var admin models.Admin
 	failed := false
 	err = h.DB.Transaction(func(tx *gorm.DB) error {
-		a, ok := h.inviteByToken(c, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		a, ok := h.inviteByToken(c, tx.Clauses(clause.Locking{Strength: "UPDATE"}), req.Token)
 		if !ok {
 			failed = true
 			return errHandled

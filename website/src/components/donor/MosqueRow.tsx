@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import { IconMosque } from '@/components/icons';
 import { Mosque } from '@/lib/api';
+import { useI18n } from '@/lib/i18n/client';
 
 /**
  * Строка мечети в белой панели («Стиль 2»): фото или иконка, название, город · адрес, метка статуса.
@@ -15,6 +18,7 @@ export default function MosqueRow({
   hasActive?: boolean;
   large?: boolean;
 }) {
+  const { t } = useI18n();
   const photo = m.photo_urls?.[0] || m.logo_url;
   const box = large ? 'w-12 h-12 lg:w-14 lg:h-14' : 'w-11 h-11';
   return (
@@ -46,9 +50,9 @@ export default function MosqueRow({
         </span>
       </span>
       {hasActive ? (
-        <span className="badge badge-sec shrink-0">Идёт сбор</span>
+        <span className="badge badge-sec shrink-0">{t('Идёт сбор')}</span>
       ) : (
-        <span className="badge badge-success shrink-0">Проверена</span>
+        <span className="badge badge-success shrink-0">{t('Проверена')}</span>
       )}
     </Link>
   );

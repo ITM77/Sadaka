@@ -18,6 +18,24 @@ export type AdminStats = {
   donations: number;
   donations_total: number;
   savob_distributed: number;
+  /** Самая старая заявка в каждой очереди — для «самая старая — 12 дн.». */
+  oldest_mosque_pending?: string | null;
+  oldest_campaign_pending?: string | null;
+  oldest_report_pending?: string | null;
+  /** «Нужен контроль»: завершённые сборы без поданного или принятого отчёта. */
+  unreported?: UnreportedItem[];
+};
+
+export type UnreportedItem = {
+  mosque_id: string;
+  mosque_name: string;
+  city: string;
+  campaign_id: string;
+  campaign_title: string;
+  completed_at: string | null;
+  report_status: '' | 'rejected';
+  report_updated: string | null;
+  pending_new: boolean;
 };
 
 type State = { stats: AdminStats | null; error: string; refresh: () => void };

@@ -142,30 +142,8 @@ export function objectHref(e: Pick<AuditEntry, 'object_type' | 'object_id' | 'ob
 }
 
 const TZ = 'Asia/Dushanbe';
-const shortFmt = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: TZ,
-});
-const longFmt = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  timeZone: TZ,
-});
-const dayFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
 
-/** «8 нояб., 09:20» */
-export const formatShort = (iso: string) => shortFmt.format(new Date(iso));
-/** «8 ноября 2026 г., 09:20:14» */
-export const formatLong = (iso: string) => longFmt.format(new Date(iso));
-/** «8 ноября 2026 г., 09:20» */
-export const formatDay = (iso: string) => dayFmt.format(new Date(iso));
+// Даты для показа — через fmt из '@/lib/i18n' (short / dateTime / dateTimeSec), с учётом языка.
 
 /** Сегодняшняя дата по Душанбе в формате ГГГГ-ММ-ДД, со сдвигом в днях. */
 export function dushanbeDate(offsetDays = 0) {

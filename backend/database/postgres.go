@@ -31,8 +31,25 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	if err := db.AutoMigrate(models.All()...); err != nil {
 		return nil, fmt.Errorf("миграция: %w", err)
 	}
+	if err := db.Exec(auditImmutableSQL).Error; err != nil {
+		return nil, fmt.Errorf("защита журнала: %w", err)
+	}
 	return db, nil
 }
+
+// auditImmutableSQL запрещает менять и удалять записи журнала действий
+// на уровне БД — даже при прямом доступе к базе или ошибке в коде.
+// Обслуживание (например, очистка тестовых данных) — только осознанно:
+// ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_immutable.
+const auditImmutableSQL = `
+CREATE OR REPLACE FUNCTION audit_logs_immutable() RETURNS trigger AS $$
+BEGIN
+	RAISE EXCEPTION 'журнал действий нельзя изменять или удалять';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_logs_immutable ON audit_logs;
+CREATE TRIGGER audit_logs_immutable BEFORE UPDATE OR DELETE ON audit_logs
+	FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable();`
 
 // BootstrapAdmin создаёт первого суперадмина Комитета, если админов ещё нет
 // и заданы ADMIN_BOOTSTRAP_EMAIL / ADMIN_BOOTSTRAP_PASSWORD.

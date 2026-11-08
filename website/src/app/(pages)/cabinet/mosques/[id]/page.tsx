@@ -16,32 +16,24 @@ import {
 } from '@/components/cabinet/ui';
 import { useMosqueCabinet } from '@/components/cabinet/useMosqueCabinet';
 import { IconArrowRight, IconEdit, IconInfo, IconPin, IconPlus, IconReport } from '@/components/icons';
-import {
-  ApiError,
-  apiFetch,
-  Campaign,
-  CATEGORY_LABELS,
-  formatDate,
-  formatMoney,
-  lastDay,
-  plural,
-  progress,
-  Report,
-} from '@/lib/api';
+import { ApiError, apiFetch, Campaign, CATEGORY_LABELS, progress, Report } from '@/lib/api';
 import { isEnded, needsReport } from '@/lib/cabinet';
+import { useI18n } from '@/lib/i18n/client';
 
 /** Действие в строке сбора: белая пилюля на плитке, 44 px — минимальная высота для пальца. */
 const ROW_BTN = 'btn btn-white min-h-[44px] px-4 text-sm';
 
 export default function CabinetMosquePage({ params }: { params: { id: string } }) {
   const { data, error, notFound: missing, reload, token } = useMosqueCabinet(params.id);
+  const { t, fmt } = useI18n();
   const [busyId, setBusyId] = useState('');
   const [actionError, setActionError] = useState('');
   const [notice, setNotice] = useState('');
   if (missing) notFound();
 
   const act = async (c: Campaign, action: 'submit' | 'complete', okText: string) => {
-    if (action === 'complete' && !confirm(`Завершить сбор «${c.title}»? Пожертвования перестанут приниматься.`)) return;
+    if (action === 'complete' && !confirm(t('Завершить сбор «{title}»? Пожертвования перестанут приниматься.', { title: c.title })))
+      return;
     setBusyId(c.id);
     setActionError('');
     setNotice('');
@@ -58,8 +50,8 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
 
   if (!data) {
     return (
-      <CabinetPage title="Мечеть" crumbs={[{ href: '/cabinet', label: 'Кабинет' }]}>
-        {error ? <Alert>{error}</Alert> : <Loading />}
+      <CabinetPage title={t('Мечеть')} crumbs={[{ href: '/cabinet', label: t('Кабинет') }]}>
+        {error ? <Alert>{t(error)}</Alert> : <Loading />}
       </CabinetPage>
     );
   }
@@ -82,7 +74,7 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
   return (
     <div className="page flex flex-col gap-4">
       <header className="flex flex-col gap-1.5 px-1">
-        <Crumbs crumbs={[{ href: '/cabinet', label: 'Кабинет' }]} current={mosque.name} />
+        <Crumbs crumbs={[{ href: '/cabinet', label: t('Кабинет') }]} current={mosque.name} />
         <h1 className="title break-words">{mosque.name}</h1>
         <p className="flex items-start gap-1.5 body-text">
           <IconPin size={16} className="shrink-0 mt-0.5 text-muted" />
@@ -97,25 +89,25 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
         <aside className="aside-sticky flex flex-col gap-3 lg:col-start-2 lg:row-start-1">
           <section className="panel" aria-labelledby="state-title">
             <h2 id="state-title" className="overtitle">
-              Состояние
+              {t('Состояние')}
             </h2>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               <MosqueStatusBadge status={mosque.status} />
-              {owing.length > 0 && <StatusBadge tone="wait">Нужен отчёт</StatusBadge>}
+              {owing.length > 0 && <StatusBadge tone="wait">{t('Нужен отчёт')}</StatusBadge>}
             </div>
             {(approved || mosque.status === 'blocked') && (
               <dl className="kv mt-3.5">
                 <div>
-                  <dt className="text-body">Идёт сборов</dt>
+                  <dt className="text-body">{t('Идёт сборов')}</dt>
                   <dd className="font-medium text-ink tabular">{activeCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-body">На одобрении</dt>
+                  <dt className="text-body">{t('На одобрении')}</dt>
                   <dd className="font-medium text-ink tabular">{pendingCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-body">Собрано за всё время</dt>
-                  <dd className="font-medium text-ink tabular whitespace-nowrap">{formatMoney(collected)}</dd>
+                  <dt className="text-body">{t('Собрано за всё время')}</dt>
+                  <dd className="font-medium text-ink tabular whitespace-nowrap">{fmt.money(collected)}</dd>
                 </div>
               </dl>
             )}
@@ -123,7 +115,7 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
               {owing.length > 0 && (
                 <Link href={`${base}/campaigns/${owing[0]!.id}/report`} className="btn btn-primary btn-block">
                   <IconReport size={18} />
-                  {owingRejected && owing.length === 1 ? 'Переподать отчёт' : 'Опубликовать отчёт'}
+                  {owingRejected && owing.length === 1 ? t('Переподать отчёт') : t('Опубликовать отчёт')}
                 </Link>
               )}
               {approved && (
@@ -132,18 +124,18 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
                   className={`btn btn-block ${owing.length > 0 ? 'btn-secondary' : 'btn-primary'}`}
                 >
                   <IconPlus size={18} />
-                  Новый сбор
+                  {t('Новый сбор')}
                 </Link>
               )}
               {mosque.status !== 'blocked' && (
                 <Link href={`${base}/edit`} className="btn btn-secondary btn-block">
                   <IconEdit size={18} />
-                  Изменить данные
+                  {t('Изменить данные')}
                 </Link>
               )}
               {approved && (
                 <Link href={`/mosques/${mosque.id}`} className="btn btn-ghost btn-block">
-                  Публичная страница
+                  {t('Публичная страница')}
                   <IconArrowRight size={16} />
                 </Link>
               )}
@@ -151,16 +143,15 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
           </section>
 
           {owing.length > 0 ? (
-            <Alert tone="warn" title={`Нужен отчёт по ${owingNames}.`}>
+            <Alert tone="warn" title={t('Нужен отчёт по {names}.', { names: owingNames })}>
               {owingRejected
-                ? 'Комитет отклонил прошлый отчёт — пока вы не подадите исправленный'
-                : 'Пока отчёт не опубликован'}
-              , новые сборы не запустятся.
+                ? t('Комитет отклонил прошлый отчёт — пока вы не подадите исправленный, новые сборы не запустятся.')
+                : t('Пока отчёт не опубликован, новые сборы не запустятся.')}
             </Alert>
           ) : (
             <div className="infobox">
               <IconInfo size={18} className="shrink-0 mt-px" />
-              <span>Нет отчёта — нет нового сбора. После завершения сбора опубликуйте отчёт о расходах.</span>
+              <span>{t('Нет отчёта — нет нового сбора. После завершения сбора опубликуйте отчёт о расходах.')}</span>
             </div>
           )}
         </aside>
@@ -168,34 +159,37 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
         <div className="min-w-0 flex flex-col gap-3 lg:col-start-1 lg:row-start-1">
           {mosque.status === 'pending' && (
             <Alert tone="info">
-              Заявка на рассмотрении у Комитета улемов. После одобрения здесь можно будет открывать сборы.
+              {t('Заявка на рассмотрении у Комитета улемов. После одобрения здесь можно будет открывать сборы.')}
             </Alert>
           )}
           {mosque.status === 'rejected' && (
-            <Alert title="Комитет отклонил заявку.">
-              {mosque.moderation_note ? `«${mosque.moderation_note}». ` : ''}Исправьте данные — заявка снова уйдёт на
-              рассмотрение.
+            <Alert title={t('Комитет отклонил заявку.')}>
+              {mosque.moderation_note ? `«${mosque.moderation_note}». ` : ''}
+              {t('Исправьте данные — заявка снова уйдёт на рассмотрение.')}
             </Alert>
           )}
           {mosque.status === 'blocked' && (
-            <Alert title="Мечеть заблокирована Комитетом.">
-              {mosque.moderation_note ? `«${mosque.moderation_note}». ` : ''}Пожертвования не принимаются.
+            <Alert title={t('Мечеть заблокирована Комитетом.')}>
+              {mosque.moderation_note ? `«${mosque.moderation_note}». ` : ''}
+              {t('Пожертвования не принимаются.')}
             </Alert>
           )}
           {notice && <Alert tone="success">{notice}</Alert>}
-          {actionError && <Alert>{actionError}</Alert>}
+          {actionError && <Alert>{t(actionError)}</Alert>}
 
           <section aria-labelledby="campaigns-title" className="panel">
             <div className="flex items-center justify-between gap-3">
               <h2 id="campaigns-title" className="overtitle">
-                Сборы
+                {t('Сборы')}
               </h2>
               {campaigns.length > 0 && <span className="caption tabular">{campaigns.length}</span>}
             </div>
 
             {campaigns.length === 0 ? (
               <p className="body-text mt-3">
-                {approved ? 'Сборов пока нет. Создайте первый — Комитет проверит его перед запуском.' : 'Сборов пока нет.'}
+                {approved
+                  ? t('Сборов пока нет. Создайте первый — Комитет проверит его перед запуском.')
+                  : t('Сборов пока нет.')}
               </p>
             ) : (
               <ul className="mt-3 flex flex-col gap-2">
@@ -209,9 +203,15 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
                     base={base}
                     busy={busyId === c.id}
                     onSubmit={() =>
-                      act(c, 'submit', `«${c.title}» отправлена на одобрение. Комитет проверит её и откроет сбор.`)
+                      act(
+                        c,
+                        'submit',
+                        t('«{title}» отправлена на одобрение. Комитет проверит её и откроет сбор.', { title: c.title }),
+                      )
                     }
-                    onComplete={() => act(c, 'complete', `Сбор «${c.title}» завершён. Теперь опубликуйте отчёт.`)}
+                    onComplete={() =>
+                      act(c, 'complete', t('Сбор «{title}» завершён. Теперь опубликуйте отчёт.', { title: c.title }))
+                    }
                   />
                 ))}
               </ul>
@@ -221,7 +221,7 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
           {reports.length > 0 && (
             <section aria-labelledby="reports-title" className="panel !pb-1">
               <h2 id="reports-title" className="overtitle">
-                Отчёты
+                {t('Отчёты')}
               </h2>
               <ul className="mt-1 divide-y divide-line">
                 {reports.map((r) => (
@@ -234,15 +234,18 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
                         href={`/campaigns/${r.campaign_id}#report`}
                         className="block text-sm leading-5 font-medium text-ink hover:text-accent-700 break-words"
                       >
-                        {r.title || titleOf(r.campaign_id) || 'Отчёт'}
+                        {r.title || titleOf(r.campaign_id) || t('Отчёт')}
                       </Link>
                       <p className="caption tabular">
-                        {formatDate(r.submitted_at)} · потрачено {formatMoney(r.total_spent)} из{' '}
-                        {formatMoney(r.total_collected)}
+                        {t('{date} · потрачено {spent} из {collected}', {
+                          date: fmt.date(r.submitted_at),
+                          spent: fmt.money(r.total_spent),
+                          collected: fmt.money(r.total_collected),
+                        })}
                       </p>
                       {r.status === 'rejected' && r.moderation_note && (
                         <p className="text-[13px] leading-[18px] text-[#B42318]">
-                          <strong className="font-semibold">Комитет:</strong> «{r.moderation_note}»
+                          <strong className="font-semibold">{t('Комитет:')}</strong> «{r.moderation_note}»
                         </p>
                       )}
                       <span className="mt-1 flex sm:hidden">
@@ -283,6 +286,7 @@ function CampaignRow({
   onSubmit: () => void;
   onComplete: () => void;
 }) {
+  const { t, fmt } = useI18n();
   const ended = isEnded(c);
   const reportable = c.status === 'completed' || ended;
   const editHref = `${base}/campaigns/${c.id}/edit`;
@@ -292,12 +296,12 @@ function CampaignRow({
   const pct = progress(c);
 
   const meta = [
-    CATEGORY_LABELS[c.category] ?? c.category,
-    `${formatDate(c.start_date)} — ${lastDay(c.end_date)}`,
+    t(CATEGORY_LABELS[c.category] ?? c.category),
+    `${fmt.date(c.start_date)} — ${fmt.lastDay(c.end_date)}`,
     !funded
-      ? `цель ${formatMoney(c.goal_amount)}`
+      ? t('цель {goal}', { goal: fmt.money(c.goal_amount) })
       : !showProgress
-        ? `собрано ${formatMoney(c.current_amount)} из ${formatMoney(c.goal_amount)}`
+        ? t('собрано {sum} из {goal}', { sum: fmt.money(c.current_amount), goal: fmt.money(c.goal_amount) })
         : '',
   ].filter(Boolean);
 
@@ -313,7 +317,7 @@ function CampaignRow({
           {report && <ReportStatusBadge status={report.status} onTile />}
           {owes && !report && (
             <StatusBadge tone="wait" onTile>
-              Нужен отчёт
+              {t('Нужен отчёт')}
             </StatusBadge>
           )}
         </div>
@@ -324,11 +328,11 @@ function CampaignRow({
           <ProgressBar value={pct} onTile />
           <div className="flex justify-between gap-3 text-[13px] leading-[18px] font-medium text-ink tabular">
             <span className="whitespace-nowrap">
-              {formatMoney(c.current_amount)} · {pct}%
+              {fmt.money(c.current_amount)} · {pct}%
             </span>
             <span className="font-normal text-body text-right">
-              из {formatMoney(c.goal_amount)} · {c.donation_count}{' '}
-              {plural(c.donation_count, ['пожертвование', 'пожертвования', 'пожертвований'])}
+              {t('из {goal}', { goal: fmt.money(c.goal_amount) })} · {c.donation_count}{' '}
+              {fmt.plural(c.donation_count, ['пожертвование', 'пожертвования', 'пожертвований'])}
             </span>
           </div>
         </div>
@@ -336,59 +340,59 @@ function CampaignRow({
 
       {c.status === 'rejected' && c.moderation_note && (
         <p className="text-[13px] leading-[18px] text-[#B42318]">
-          <strong className="font-semibold">Комитет:</strong> «{c.moderation_note}»
+          <strong className="font-semibold">{t('Комитет:')}</strong> «{c.moderation_note}»
         </p>
       )}
       {report?.status === 'rejected' && report.moderation_note && (
         <p className="text-[13px] leading-[18px] text-[#B42318]">
-          <strong className="font-semibold">Комитет об отчёте:</strong> «{report.moderation_note}»
+          <strong className="font-semibold">{t('Комитет об отчёте:')}</strong> «{report.moderation_note}»
         </p>
       )}
       {c.status === 'draft' && blockedBy && (
         <p className="alert-error" role="note">
-          Нельзя отправить на одобрение: сначала опубликуйте отчёт по {blockedBy}.
+          {t('Нельзя отправить на одобрение: сначала опубликуйте отчёт по {names}.', { names: blockedBy })}
         </p>
       )}
-      {c.status === 'pending_approval' && <p className="caption">Ждёт решения Комитета улемов.</p>}
+      {c.status === 'pending_approval' && <p className="caption">{t('Ждёт решения Комитета улемов.')}</p>}
 
       <div className="flex flex-wrap gap-2 empty:hidden">
         {c.status === 'draft' && (
           <>
             <Link href={editHref} className={ROW_BTN}>
               <IconEdit size={16} />
-              Редактировать
+              {t('Редактировать')}
             </Link>
             <button type="button" className={ROW_BTN} disabled={busy || !!blockedBy} onClick={onSubmit}>
-              {busy ? 'Отправляем…' : 'Отправить на одобрение'}
+              {busy ? t('Отправляем…') : t('Отправить на одобрение')}
             </button>
           </>
         )}
         {c.status === 'rejected' && (
           <Link href={editHref} className={ROW_BTN}>
             <IconEdit size={16} />
-            Исправить
+            {t('Исправить')}
           </Link>
         )}
         {c.status === 'active' && (
           <Link href={`/campaigns/${c.id}`} className={ROW_BTN}>
-            Страница сбора
+            {t('Страница сбора')}
             <IconArrowRight size={16} />
           </Link>
         )}
         {c.status === 'active' && !ended && (
           <button type="button" className={ROW_BTN} disabled={busy} onClick={onComplete}>
-            {busy ? 'Завершаем…' : 'Завершить сбор'}
+            {busy ? t('Завершаем…') : t('Завершить сбор')}
           </button>
         )}
         {reportable && (!report || report.status === 'rejected') && (
           <Link href={reportHref} className={ROW_BTN}>
             <IconReport size={16} />
-            {report ? 'Переподать отчёт' : 'Опубликовать отчёт'}
+            {report ? t('Переподать отчёт') : t('Опубликовать отчёт')}
           </Link>
         )}
         {reportable && report && report.status !== 'rejected' && (
           <Link href={`/campaigns/${c.id}#report`} className={ROW_BTN}>
-            Отчёт
+            {t('Отчёт')}
             <IconArrowRight size={16} />
           </Link>
         )}

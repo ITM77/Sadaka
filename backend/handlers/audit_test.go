@@ -22,6 +22,23 @@ func TestSom(t *testing.T) {
 	}
 }
 
+func TestCsvSafe(t *testing.T) {
+	cases := map[string]string{
+		"":                     "",
+		"Масҷиди Нур":          "Масҷиди Нур",
+		"=HYPERLINK(\"x\")":    "'=HYPERLINK(\"x\")",
+		"+992900000000":        "'+992900000000",
+		"-1":                   "'-1",
+		"@SUM(A1)":             "'@SUM(A1)",
+		"Причина: =не формула": "Причина: =не формула",
+	}
+	for in, want := range cases {
+		if got := csvSafe(in); got != want {
+			t.Errorf("csvSafe(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestHashTokenStable(t *testing.T) {
 	tok, hash, err := newInviteToken()
 	if err != nil {

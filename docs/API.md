@@ -184,19 +184,28 @@
 | `GET` | `/admin/audit?admin_id=&action=&object_type=&from=&to=&q=` | superadmin | — |
 | `GET` | `/admin/audit/:id` | superadmin | — |
 | `GET` | `/admin/audit/export?…` | superadmin | — (CSV, UTF-8 с BOM, разделитель `;`) |
-| `GET` | `/admin/invite/:token` | без входа | — |
-| `POST` | `/admin/invite/:token` | без входа | `{ "password": "..." }` → `{ token, admin }` |
+| `POST` | `/admin/invite/lookup` | без входа | `{ "token": "..." }` |
+| `POST` | `/admin/invite/accept` | без входа | `{ "token": "...", "password": "..." }` → `{ token, admin }` |
 
-- Приглашение и `/link` возвращают `invite_token` (действует 72 часа, одноразовый). Писем платформа не отправляет: ссылку `/admin/invite/<token>` суперадмин передаёт сотруднику сам. `/link` у работающего сотрудника — сброс пароля: старый пароль и все сессии сразу перестают действовать.
+- Приглашение и `/link` возвращают `invite_token` (действует 72 часа, одноразовый). Писем платформа не отправляет: ссылку `/admin/invite#<token>` суперадмин передаёт сотруднику сам. Код стоит после `#` и уходит на API только в теле запроса — поэтому не попадает в логи сервера, прокси и в Referer. `/link` у работающего сотрудника — сброс пароля: старый пароль и все сессии сразу перестают действовать.
 - Свою учётную запись суперадмин менять не может (`409`) — так в системе всегда остаётся хотя бы один суперадмин.
+- Попытки входа (`/auth/login`, `/admin/auth/login`) ограничены: 10 за 15 минут с одного IP, регистрация — 20 в час, приглашения — 20 за 15 минут. Сверх лимита — `429` с `Retry-After`.
+- IP берётся из соединения. `X-Forwarded-For` учитывается только от прокси из `TRUSTED_PROXIES` (IP/CIDR через запятую) — иначе IP в журнале можно подделать.
+- В истории мечети IP и браузер сотрудников не отдаются — они видны только в журнале (суперадмин). В CSV значения, начинающиеся с `= + - @`, экранируются, чтобы Excel не выполнил их как формулу.
+- Записи журнала нельзя изменить или удалить и на уровне БД: триггер `audit_logs_immutable`.
 - Журнал (`audit_logs`) пишется в той же транзакции, что и решение: одобрение/отказ мечети, сбора, отчёта, блокировка, снятие блокировки и все действия с сотрудниками. Хранятся автор, роль, статус до и после, причина, IP и User-Agent. События мечети (подача заявки, сбора, отчёта, завершение сбора) попадают только в историю мечети, а не в журнал сотрудников.
+
+`GET /admin/mosques` принимает ещё `city`, `q` (название, адрес, город, имам, телефон), `order=asc`; каждая мечеть приходит со счётчиками `active_campaigns`, `unreported_campaigns`, `active_collected`, а в ответе есть `cities` — список городов для фильтра реестра. `GET /admin/campaigns` добавляет к сбору `mosque_unreported` — сколько у мечети завершённых сборов без отчёта. `GET /admin/mosques/:id/campaigns` (любая роль) → `{ mosque, campaigns, reports }` — «Контекст мечети» в очереди сборов.
 
 `GET /admin/dashboard` →
 ```json
 { "mosques_approved": 1, "mosques_pending": 0, "mosques_blocked": 0,
   "campaigns_active": 1, "campaigns_pending": 0, "reports_pending": 0,
   "campaigns_without_report": 0, "users": 2, "donations": 22,
-  "donations_total": 725.5, "savob_distributed": 72 }
+  "donations_total": 725.5, "savob_distributed": 72,
+  "oldest_mosque_pending": "2026-11-01T10:14:00+05:00", "oldest_campaign_pending": null, "oldest_report_pending": null,
+  "unreported": [{ "mosque_name": "...", "city": "...", "campaign_title": "...", "completed_at": "...",
+                   "report_status": "" | "rejected", "pending_new": true }] }
 ```
 
 ---

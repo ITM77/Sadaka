@@ -5,6 +5,7 @@ import { cloneElement, isValidElement, ReactElement, ReactNode, useEffect, useRe
 import { IconAlert, IconCheck, IconCheckCircle, IconInfo } from '@/components/icons';
 import { Campaign, Mosque, Report } from '@/lib/api';
 import { CAMPAIGN_STATUS, MOSQUE_STATUS, REPORT_STATUS, TONE_CLASS } from '@/lib/cabinet';
+import { useI18n } from '@/lib/i18n/client';
 
 /** Единые цвета статусов кабинета: ok — зелёный, wait — янтарный, bad — красный, neutral — серый. */
 export const TONE_BADGE = TONE_CLASS;
@@ -21,34 +22,37 @@ export function StatusBadge({ tone, onTile, children }: { tone: Tone; onTile?: b
 }
 
 export function MosqueStatusBadge({ status, onTile }: { status: Mosque['status']; onTile?: boolean }) {
+  const { t } = useI18n();
   const st = MOSQUE_STATUS[status];
   return (
     <StatusBadge tone={st.tone} onTile={onTile}>
-      {st.label}
+      {t(st.label)}
     </StatusBadge>
   );
 }
 
 export function CampaignStatusBadge({ campaign, ended, onTile }: { campaign: Campaign; ended?: boolean; onTile?: boolean }) {
+  const { t } = useI18n();
   if (ended)
     return (
       <StatusBadge tone="wait" onTile={onTile}>
-        Срок истёк
+        {t('Срок истёк')}
       </StatusBadge>
     );
   const st = CAMPAIGN_STATUS[campaign.status];
   return (
     <StatusBadge tone={st.tone} onTile={onTile}>
-      {st.label}
+      {t(st.label)}
     </StatusBadge>
   );
 }
 
 export function ReportStatusBadge({ status, onTile }: { status: Report['status']; onTile?: boolean }) {
+  const { t } = useI18n();
   const st = REPORT_STATUS[status];
   return (
     <StatusBadge tone={st.tone} onTile={onTile}>
-      {st.label}
+      {t(st.label)}
     </StatusBadge>
   );
 }
@@ -57,8 +61,9 @@ type Crumb = { href: string; label: string };
 
 /** Хлебные крошки кабинета: подпись 13/18, ссылки — #B34A12. */
 export function Crumbs({ crumbs, current }: { crumbs: Crumb[]; current?: string }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Навигация по кабинету">
+    <nav aria-label={t('Навигация по кабинету')}>
       <ol className="flex flex-wrap items-center gap-x-1.5 text-[13px] leading-[18px] text-muted">
         {crumbs.map((c) => (
           <li key={c.href} className="flex items-center gap-1.5 min-w-0">
@@ -247,5 +252,6 @@ export function FormError({ children }: { children: string }) {
 }
 
 export function Loading() {
-  return <div className="skeleton h-40 !rounded-card" aria-busy="true" aria-label="Загрузка" />;
+  const { t } = useI18n();
+  return <div className="skeleton h-40 !rounded-card" aria-busy="true" aria-label={t('Загрузка')} />;
 }

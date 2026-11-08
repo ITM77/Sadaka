@@ -4,18 +4,20 @@ import { useRouter } from 'next/navigation';
 import MosqueForm from '@/components/cabinet/MosqueForm';
 import { MosqueChecklist } from '@/components/cabinet/MosqueChecklist';
 import { CabinetPage } from '@/components/cabinet/ui';
+import { useI18n } from '@/lib/i18n/client';
 
 const STAGES = ['Данные мечети', 'Проверка Комитетом', 'Открытие сборов'];
 
 export default function NewMosquePage() {
   const router = useRouter();
+  const { t } = useI18n();
   return (
     <CabinetPage
-      title="Заявка на регистрацию мечети"
-      crumbs={[{ href: '/cabinet', label: 'Кабинет' }]}
-      current="Заявка"
+      title={t('Заявка на регистрацию мечети')}
+      crumbs={[{ href: '/cabinet', label: t('Кабинет') }]}
+      current={t('Заявка')}
     >
-      <ol aria-label="Этапы" className="flex flex-wrap gap-1.5">
+      <ol aria-label={t('Этапы')} className="flex flex-wrap gap-1.5">
         {STAGES.map((s, i) => {
           const on = i === 0;
           return (
@@ -34,7 +36,7 @@ export default function NewMosquePage() {
               >
                 {i + 1}
               </span>
-              {s}
+              {t(s)}
             </li>
           );
         })}

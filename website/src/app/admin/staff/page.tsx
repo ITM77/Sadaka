@@ -8,9 +8,10 @@ import { IconAlert, IconCheck, IconCopy, IconInfo, IconPlus, IconUsers } from '@
 import Dialog from '@/components/admin/Dialog';
 import NoAccess from '@/components/admin/NoAccess';
 import { AdminTitle, FoundLine, ListSkeleton, matches, Notice } from '@/components/admin/Moderation';
-import { ApiError, formatDate, initials } from '@/lib/api';
+import { ApiError, initials } from '@/lib/api';
 import { AdminRole, canManageStaff, PERMISSIONS, ROLE_LABELS, ROLE_RIGHTS, useAdmin } from '@/lib/adminAuth';
-import { actionOf, AuditEntry, formatDay, formatShort, Staff } from '@/lib/audit';
+import { actionOf, AuditEntry, Staff } from '@/lib/audit';
+import { useI18n } from '@/lib/i18n/client';
 
 const ROLES: AdminRole[] = ['superadmin', 'moderator', 'analyst'];
 
@@ -33,6 +34,7 @@ function StaffSection() {
 
 function StaffList() {
   const { admin, call } = useAdmin();
+  const { t, fmt } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -79,7 +81,7 @@ function StaffList() {
   const enable = async (s: Staff) => {
     try {
       await call(`/admin/staff/${s.id}/enable`, { method: 'POST', body: {} });
-      changed(`${s.full_name} — доступ включён.`);
+      changed(`${s.full_name} — ${t('доступ включён')}.`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Не удалось включить доступ');
     }
@@ -90,19 +92,28 @@ function StaffList() {
   return (
     <div className="flex flex-col gap-4 md:gap-5">
       <AdminTitle
-        sub="Приглашать, менять роль и отключать доступ может только суперадмин. Все изменения попадают в журнал."
-        aside={staff ? `${counts.active} работают · ${counts.invited} приглашены · ${counts.disabled} отключены` : undefined}
+        over={t('Управление')}
+        sub={t('Приглашать, менять роль и отключать доступ может только суперадмин. Все изменения попадают в журнал.')}
+        aside={
+          staff
+            ? t('{active} работают · {invited} приглашены · {disabled} отключены', {
+                active: counts.active,
+                invited: counts.invited,
+                disabled: counts.disabled,
+              })
+            : undefined
+        }
       >
-        Сотрудники
+        {t('Сотрудники')}
       </AdminTitle>
 
-      <section className="panel flex flex-col gap-4" aria-label="Сотрудники Комитета">
+      <section className="panel flex flex-col gap-4" aria-label={t('Сотрудники Комитета')}>
         <div className="flex flex-wrap items-center gap-2">
           <label className="input flex items-center gap-2.5 text-muted cursor-text focus-within:border-accent-700 flex-1 min-w-[220px] sm:max-w-[360px]">
-            <span className="sr-only">Поиск сотрудника</span>
+            <span className="sr-only">{t('Поиск сотрудника')}</span>
             <input
               type="search"
-              placeholder="Имя или email"
+              placeholder={t('Имя или email')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1 min-w-0 h-full border-0 p-0 bg-transparent text-base text-ink focus:ring-0 focus:outline-none focus-visible:outline-none"
@@ -110,20 +121,20 @@ function StaffList() {
           </label>
           <button type="button" className="btn btn-primary sm:ml-auto w-full sm:w-auto" onClick={() => setInviting(true)}>
             <IconPlus size={18} />
-            Пригласить сотрудника
+            {t('Пригласить сотрудника')}
           </button>
         </div>
 
         <Notice text={notice} onClose={() => setNotice('')} />
         {error && (
           <p className="alert-error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {!staff && !error && <ListSkeleton />}
         {staff && staff.length === 0 && (
-          <EmptyState icon={<IconUsers size={26} />} title="Сотрудников нет">
-            Пригласите первого сотрудника Комитета.
+          <EmptyState icon={<IconUsers size={26} />} title={t('Сотрудников нет')}>
+            {t('Пригласите первого сотрудника Комитета.')}
           </EmptyState>
         )}
         {shown && staff && staff.length > 0 && (
@@ -133,16 +144,16 @@ function StaffList() {
             {/* Веб: таблица как в 12i */}
             <div className="hidden lg:block -mx-1">
               <table className="w-full text-sm leading-5 border-separate border-spacing-0">
-                <caption className="sr-only">Сотрудники Комитета улемов</caption>
+                <caption className="sr-only">{t('Сотрудники Комитета улемов')}</caption>
                 <thead>
                   <tr className="text-left text-xs leading-4 text-body">
-                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line">Сотрудник</th>
+                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line">{t('Сотрудник')}</th>
                     <th scope="col" className="font-medium px-3 py-2.5 border-b border-line hidden xl:table-cell">Email</th>
-                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[190px]">Роль</th>
-                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[140px]">Доступ</th>
-                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[150px]">Последний вход</th>
+                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[190px]">{t('Роль')}</th>
+                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[140px]">{t('Доступ')}</th>
+                    <th scope="col" className="font-medium px-3 py-2.5 border-b border-line w-[150px]">{t('Последний вход')}</th>
                     <th scope="col" className="px-3 py-2.5 border-b border-line w-[150px]">
-                      <span className="sr-only">Действия</span>
+                      <span className="sr-only">{t('Действия')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -161,7 +172,7 @@ function StaffList() {
                             <span className="min-w-0">
                               <span className="block break-words">
                                 {s.full_name}
-                                <span className="sr-only"> — открыть карточку</span>
+                                <span className="sr-only"> — {t('открыть карточку')}</span>
                               </span>
                               <span className="block xl:hidden caption font-normal [overflow-wrap:anywhere]">{s.email}</span>
                             </span>
@@ -171,8 +182,8 @@ function StaffList() {
                         <td className="px-3 py-2 border-b border-line">
                           {self || s.status === 'disabled' ? (
                             <span className="flex flex-col">
-                              <span>{ROLE_LABELS[s.role]}</span>
-                              {self && <span className="caption">это вы</span>}
+                              <span>{t(ROLE_LABELS[s.role])}</span>
+                              {self && <span className="caption">{t('это вы')}</span>}
                             </span>
                           ) : (
                             <RoleSelect value={s.role} name={s.full_name} onChange={(role) => setRoleChange({ s, role })} />
@@ -182,18 +193,18 @@ function StaffList() {
                           <StaffBadge s={s} />
                         </td>
                         <td className="px-3 py-2 border-b border-line tabular">
-                          {s.last_login_at ? formatShort(s.last_login_at) : <span className="text-muted">ещё не входил(а)</span>}
+                          {s.last_login_at ? fmt.short(s.last_login_at) : <span className="text-muted">{t('ещё не входил(а)')}</span>}
                         </td>
                         <td className="px-3 py-2 border-b border-line text-right">
                           {self ? (
                             <span className="caption">—</span>
                           ) : s.status === 'disabled' ? (
                             <button type="button" className="btn btn-sm bg-ok-soft text-ok hover:bg-[#DCF0E4] hover:text-ok" onClick={() => enable(s)}>
-                              Включить<span className="sr-only">: {s.full_name}</span>
+                              {t('Включить')}<span className="sr-only">: {s.full_name}</span>
                             </button>
                           ) : (
                             <button type="button" className="btn btn-sm btn-secondary" onClick={() => setDisabling(s)}>
-                              Отключить<span className="sr-only">: {s.full_name}</span>
+                              {t('Отключить')}<span className="sr-only">: {s.full_name}</span>
                             </button>
                           )}
                         </td>
@@ -217,11 +228,11 @@ function StaffList() {
                     <span className="min-w-0 flex-1 flex flex-col items-start gap-0.5">
                       <span className="font-medium text-ink break-words">
                         {s.full_name}
-                        {s.id === admin?.id && <span className="caption"> · это вы</span>}
+                        {s.id === admin?.id && <span className="caption"> · {t('это вы')}</span>}
                       </span>
                       <span className="caption [overflow-wrap:anywhere]">{s.email}</span>
                       <span className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className="badge badge-sec">{ROLE_LABELS[s.role]}</span>
+                        <span className="badge badge-sec">{t(ROLE_LABELS[s.role])}</span>
                         <StaffBadge s={s} />
                       </span>
                     </span>
@@ -239,7 +250,7 @@ function StaffList() {
         onDone={(res) => {
           setInviting(false);
           setLink({ ...res, kind: 'invite' });
-          changed(`${res.staff.full_name} приглашён(а) — передайте ссылку сотруднику.`);
+          changed(t('{name} приглашён(а) — передайте ссылку сотруднику.', { name: res.staff.full_name }));
         }}
       />
 
@@ -262,7 +273,7 @@ function StaffList() {
         onClose={() => setRoleChange(null)}
         onDone={(s) => {
           setRoleChange(null);
-          changed(`${s.full_name} — роль изменена на «${ROLE_LABELS[s.role]}».`);
+          changed(`${s.full_name} — ${t('роль изменена на «{role}»', { role: t(ROLE_LABELS[s.role]) })}.`);
         }}
       />
 
@@ -271,7 +282,7 @@ function StaffList() {
         onClose={() => setDisabling(null)}
         onDone={(s) => {
           setDisabling(null);
-          changed(`${s.full_name} — доступ отключён, сессии завершены.`);
+          changed(`${s.full_name} — ${t('доступ отключён, сессии завершены')}.`);
         }}
       />
 
@@ -281,7 +292,7 @@ function StaffList() {
         onDone={(res, kind) => {
           setResetting(null);
           setLink({ ...res, kind });
-          changed(kind === 'reset' ? `${res.staff.full_name} — пароль сброшен.` : `${res.staff.full_name} — новая ссылка готова.`);
+          changed(`${res.staff.full_name} — ${t(kind === 'reset' ? 'пароль сброшен' : 'новая ссылка готова')}.`);
         }}
       />
     </div>
@@ -304,18 +315,20 @@ function Avatar({ name, muted, size = 'md' }: { name: string; muted?: boolean; s
 }
 
 function StaffBadge({ s }: { s: Staff }) {
-  if (s.status === 'disabled') return <span className="badge badge-neutral shrink-0">Отключён</span>;
+  const { t } = useI18n();
+  if (s.status === 'disabled') return <span className="badge badge-neutral shrink-0">{t('Отключён')}</span>;
   if (s.status === 'invited') {
-    if (s.invite_expired) return <span className="badge badge-danger shrink-0">Ссылка истекла</span>;
-    return <span className="badge badge-warning shrink-0">{s.last_login_at ? 'Ждёт новый пароль' : 'Приглашён'}</span>;
+    if (s.invite_expired) return <span className="badge badge-danger shrink-0">{t('Ссылка истекла')}</span>;
+    return <span className="badge badge-warning shrink-0">{t(s.last_login_at ? 'Ждёт новый пароль' : 'Приглашён')}</span>;
   }
-  return <span className="badge badge-success shrink-0">Активен</span>;
+  return <span className="badge badge-success shrink-0">{t('Активен')}</span>;
 }
 
 function RoleSelect({ value, name, onChange }: { value: AdminRole; name: string; onChange: (r: AdminRole) => void }) {
+  const { t } = useI18n();
   return (
     <label className="relative block">
-      <span className="sr-only">Роль: {name}</span>
+      <span className="sr-only">{t('Роль: {name}', { name })}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as AdminRole)}
@@ -323,7 +336,7 @@ function RoleSelect({ value, name, onChange }: { value: AdminRole; name: string;
       >
         {ROLES.map((r) => (
           <option key={r} value={r}>
-            {ROLE_LABELS[r]}
+            {t(ROLE_LABELS[r])}
           </option>
         ))}
       </select>
@@ -335,10 +348,11 @@ function RoleSelect({ value, name, onChange }: { value: AdminRole; name: string;
 }
 
 function ErrorLine({ text }: { text: string }) {
+  const { t } = useI18n();
   if (!text) return null;
   return (
     <p className="alert-error" role="alert">
-      {text}
+      {t(text)}
     </p>
   );
 }
@@ -360,6 +374,7 @@ function InviteDialog({
   const [role, setRole] = useState<AdminRole>('moderator');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useI18n();
 
   useEffect(() => {
     if (open) {
@@ -391,15 +406,15 @@ function InviteDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Пригласить сотрудника"
-      sub="Доступ к панели Комитета улемов"
+      title={t('Пригласить сотрудника')}
+      sub={t('Доступ к панели Комитета улемов')}
       footer={
         <>
           <button type="submit" form="invite-form" className="btn btn-primary flex-1 sm:flex-none" disabled={busy}>
-            {busy ? 'Создаём ссылку…' : 'Создать приглашение'}
+            {busy ? t('Создаём ссылку…') : t('Создать приглашение')}
           </button>
           <button type="button" className="btn btn-ghost flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
-            Отмена
+            {t('Отмена')}
           </button>
         </>
       }
@@ -407,13 +422,13 @@ function InviteDialog({
       <form id="invite-form" onSubmit={submit} className="flex flex-col gap-4">
         <div>
           <label htmlFor="inv-name" className="label">
-            ФИО
+            {t('ФИО')}
           </label>
           <input id="inv-name" className="input" required maxLength={255} value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />
         </div>
         <div>
           <label htmlFor="inv-email" className="label">
-            Рабочий email
+            {t('Рабочий email')}
           </label>
           <input
             id="inv-email"
@@ -427,11 +442,11 @@ function InviteDialog({
             autoComplete="off"
           />
           <p id="inv-email-hint" className="caption mt-1.5">
-            Станет логином сотрудника. Один email — один сотрудник.
+            {t('Станет логином сотрудника. Один email — один сотрудник.')}
           </p>
         </div>
         <fieldset>
-          <legend className="label">Роль</legend>
+          <legend className="label">{t('Роль')}</legend>
           <div className="flex flex-col gap-2">
             {ROLES.map((r) => (
               <label
@@ -449,8 +464,8 @@ function InviteDialog({
                   className="mt-0.5 w-5 h-5 accent-[#B34A12] shrink-0"
                 />
                 <span className="min-w-0">
-                  <span className="block font-medium text-ink">{ROLE_LABELS[r]}</span>
-                  <span className="block caption mt-0.5">{ROLE_RIGHTS[r]}</span>
+                  <span className="block font-medium text-ink">{t(ROLE_LABELS[r])}</span>
+                  <span className="block caption mt-0.5">{t(ROLE_RIGHTS[r])}</span>
                 </span>
               </label>
             ))}
@@ -459,8 +474,7 @@ function InviteDialog({
         <div className="infobox">
           <IconInfo size={18} className="shrink-0 mt-px" />
           <span>
-            Панель создаст ссылку-приглашение на 72 часа. Писем платформа пока не отправляет — скопируйте ссылку и
-            передайте сотруднику сами. По ней он задаст пароль и войдёт.
+            {t('Панель создаст ссылку-приглашение на 72 часа. Писем платформа пока не отправляет — скопируйте ссылку и передайте сотруднику сами. По ней он задаст пароль и войдёт.')}
           </span>
         </div>
         <ErrorLine text={error} />
@@ -474,28 +488,30 @@ function InviteDialog({
 function LinkDialog({ result, onClose }: { result: LinkResult | null; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('');
+  const { t, fmt } = useI18n();
   useEffect(() => setOrigin(window.location.origin), []);
   useEffect(() => setCopied(false), [result]);
   if (!result) return <Dialog open={false} onClose={onClose} title="">{null}</Dialog>;
 
-  const url = `${origin}/admin/invite/${result.invite_token}`;
-  const title = result.kind === 'reset' ? 'Ссылка для нового пароля' : 'Ссылка-приглашение';
+  // Код после «#»: браузер не отправляет эту часть на сервер — она не попадёт в логи.
+  const url = `${origin}/admin/invite#${result.invite_token}`;
+  const title = t(result.kind === 'reset' ? 'Ссылка для нового пароля' : 'Ссылка-приглашение');
 
   return (
     <Dialog
       open
       onClose={onClose}
       title={title}
-      sub={`${result.staff.full_name} · ${result.staff.email} · ${ROLE_LABELS[result.staff.role]}`}
+      sub={`${result.staff.full_name} · ${result.staff.email} · ${t(ROLE_LABELS[result.staff.role])}`}
       footer={
         <button type="button" className="btn btn-secondary flex-1 sm:flex-none" onClick={onClose}>
-          Готово
+          {t('Готово')}
         </button>
       }
     >
       <div>
         <label htmlFor="invite-url" className="label">
-          Передайте ссылку сотруднику
+          {t('Передайте ссылку сотруднику')}
         </label>
         <input id="invite-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()} className="input text-sm font-medium text-body" />
       </div>
@@ -512,13 +528,14 @@ function LinkDialog({ result, onClose }: { result: LinkResult | null; onClose: (
         }}
       >
         {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
-        <span aria-live="polite">{copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}</span>
+        <span aria-live="polite">{copied ? t('Ссылка скопирована') : t('Скопировать ссылку')}</span>
       </button>
       <div className="infobox">
         <IconInfo size={18} className="shrink-0 mt-px" />
         <span>
-          Ссылка одноразовая и действует до {formatDay(result.invite_expires_at)} по Душанбе. Показываем её один раз:
-          если потеряете — создайте новую в карточке сотрудника. Отправляйте только на рабочий контакт.
+          {t('Ссылка одноразовая и действует до {date} по Душанбе. Показываем её один раз: если потеряете — создайте новую в карточке сотрудника. Отправляйте только на рабочий контакт.', {
+            date: fmt.dateTime(result.invite_expires_at),
+          })}
         </span>
       </div>
     </Dialog>
@@ -551,6 +568,7 @@ function StaffCard({
   const { call } = useAdmin();
   const [data, setData] = useState<{ staff: Staff; recent: AuditEntry[]; actions_total: number } | null>(null);
   const [error, setError] = useState('');
+  const { t, fmt } = useI18n();
 
   useEffect(() => {
     if (!id) {
@@ -575,22 +593,22 @@ function StaffCard({
       open={Boolean(id)}
       onClose={onClose}
       variant="drawer"
-      overtitle="Карточка сотрудника"
-      title={s?.full_name ?? 'Загрузка…'}
+      overtitle={t('Карточка сотрудника')}
+      title={s?.full_name ?? t('Загрузка…')}
       sub={s?.email}
       footer={
         s && !self ? (
           s.status === 'disabled' ? (
             <button type="button" className="btn bg-ok-soft text-ok hover:bg-[#DCF0E4] hover:text-ok flex-1" onClick={() => onEnable(s)}>
-              Включить доступ
+              {t('Включить доступ')}
             </button>
           ) : (
             <>
               <button type="button" className="btn btn-secondary flex-1" onClick={() => onLink(s)}>
-                {s.status === 'invited' ? 'Новая ссылка' : 'Сбросить пароль'}
+                {t(s.status === 'invited' ? 'Новая ссылка' : 'Сбросить пароль')}
               </button>
               <button type="button" className="btn btn-danger flex-1" onClick={() => onDisable(s)}>
-                Отключить доступ
+                {t('Отключить доступ')}
               </button>
             </>
           )
@@ -605,14 +623,14 @@ function StaffCard({
             <Avatar name={s.full_name} size="lg" muted={s.status === 'disabled'} />
             <div className="min-w-0 flex flex-col items-start gap-1">
               <StaffBadge s={s} />
-              {self && <span className="caption">это вы — свою учётную запись меняет другой суперадмин</span>}
+              {self && <span className="caption">{t('это вы — свою учётную запись меняет другой суперадмин')}</span>}
             </div>
           </div>
 
           {!self && s.status !== 'disabled' && (
             <fieldset>
-              <legend className="label">Роль</legend>
-              <div className="segmented" role="radiogroup" aria-label="Роль">
+              <legend className="label">{t('Роль')}</legend>
+              <div className="segmented" role="radiogroup" aria-label={t('Роль')}>
                 {ROLES.map((r) => (
                   <button
                     key={r}
@@ -622,38 +640,38 @@ function StaffCard({
                     className="text-sm px-2"
                     onClick={() => s.role !== r && onRole(s, r)}
                   >
-                    {ROLE_LABELS[r]}
+                    {t(ROLE_LABELS[r])}
                   </button>
                 ))}
               </div>
-              <p className="caption mt-1.5">{ROLE_RIGHTS[s.role]}</p>
+              <p className="caption mt-1.5">{t(ROLE_RIGHTS[s.role])}</p>
             </fieldset>
           )}
 
           <dl className="kv">
             {(self || s.status === 'disabled') && (
               <div>
-                <dt className="text-body">Роль</dt>
-                <dd className="font-medium text-ink text-right">{ROLE_LABELS[s.role]}</dd>
+                <dt className="text-body">{t('Роль')}</dt>
+                <dd className="font-medium text-ink text-right">{t(ROLE_LABELS[s.role])}</dd>
               </div>
             )}
             <div>
-              <dt className="text-body">Добавлен(а)</dt>
+              <dt className="text-body">{t('Добавлен(а)')}</dt>
               <dd className="font-medium text-ink text-right">
-                {formatDate(s.created_at)}
-                {s.invited_by_name && <span className="block caption font-normal">пригласил(а) {s.invited_by_name}</span>}
+                {fmt.date(s.created_at)}
+                {s.invited_by_name && <span className="block caption font-normal">{t('пригласил(а) {name}', { name: s.invited_by_name })}</span>}
               </dd>
             </div>
             <div>
-              <dt className="text-body">Последний вход</dt>
-              <dd className="font-medium text-ink text-right tabular">{s.last_login_at ? formatShort(s.last_login_at) : 'ещё не входил(а)'}</dd>
+              <dt className="text-body">{t('Последний вход')}</dt>
+              <dd className="font-medium text-ink text-right tabular">{s.last_login_at ? fmt.short(s.last_login_at) : t('ещё не входил(а)')}</dd>
             </div>
             {s.status === 'invited' && s.invite_expires_at && (
               <div>
-                <dt className="text-body">Ссылка действует до</dt>
+                <dt className="text-body">{t('Ссылка действует до')}</dt>
                 <dd className={`font-medium text-right tabular ${s.invite_expired ? 'text-[#B42318]' : 'text-ink'}`}>
-                  {formatShort(s.invite_expires_at)}
-                  {s.invite_expired && ' — истекла'}
+                  {fmt.short(s.invite_expires_at)}
+                  {s.invite_expired && ` — ${t('истекла')}`}
                 </dd>
               </div>
             )}
@@ -661,36 +679,36 @@ function StaffCard({
 
           {s.status === 'disabled' && s.disabled_reason && (
             <div className="tile">
-              <p className="overtitle">Причина отключения</p>
+              <p className="overtitle">{t('Причина отключения')}</p>
               <p className="mt-1 text-sm leading-5 text-ink break-words">«{s.disabled_reason}»</p>
-              {s.disabled_at && <p className="caption mt-1">{formatShort(s.disabled_at)}</p>}
+              {s.disabled_at && <p className="caption mt-1">{fmt.short(s.disabled_at)}</p>}
             </div>
           )}
 
           <section aria-labelledby="staff-recent">
             <div className="flex items-baseline justify-between gap-3 mb-2">
               <h3 id="staff-recent" className="overtitle">
-                Последние действия
+                {t('Последние действия')}
               </h3>
               {data && data.actions_total > 0 && (
                 <Link href={`/admin/audit?admin_id=${s.id}`} className="text-sm font-medium text-accent-700 hover:text-accent-800">
-                  Весь журнал · {data.actions_total}
+                  {t('Весь журнал')} · {data.actions_total}
                 </Link>
               )}
             </div>
-            {data && data.recent.length === 0 && <p className="body-text">Решений пока нет.</p>}
+            {data && data.recent.length === 0 && <p className="body-text">{t('Решений пока нет.')}</p>}
             {data && data.recent.length > 0 && (
               <ul className="kv">
                 {data.recent.map((e) => (
                   <li key={e.id} className="!items-start py-2">
                     <span className="min-w-0">
-                      <span className="block text-ink font-medium break-words">{actionOf(e.action).label}</span>
+                      <span className="block text-ink font-medium break-words">{t(actionOf(e.action).label)}</span>
                       <span className="block caption break-words">
                         {e.object_title}
                         {e.object_subtitle ? ` · ${e.object_subtitle}` : ''}
                       </span>
                     </span>
-                    <span className="caption tabular whitespace-nowrap">{formatShort(e.created_at)}</span>
+                    <span className="caption tabular whitespace-nowrap">{fmt.short(e.created_at)}</span>
                   </li>
                 ))}
               </ul>
@@ -716,6 +734,7 @@ function RoleDialog({
   const { call } = useAdmin();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useI18n();
   useEffect(() => setError(''), [change]);
 
   if (!change) return <Dialog open={false} onClose={onClose} title="">{null}</Dialog>;
@@ -741,35 +760,34 @@ function RoleDialog({
     <Dialog
       open
       onClose={onClose}
-      title="Сменить роль?"
+      title={t('Сменить роль?')}
       sub={`${s.full_name} · ${s.email}`}
       footer={
         <>
           <button type="button" className="btn btn-primary flex-1 sm:flex-none" onClick={confirm} disabled={busy}>
-            {busy ? 'Сохраняем…' : 'Сменить роль'}
+            {busy ? t('Сохраняем…') : t('Сменить роль')}
           </button>
           <button type="button" className="btn btn-ghost flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
-            Отмена
+            {t('Отмена')}
           </button>
         </>
       }
     >
       <div className="grid grid-cols-2 gap-2">
         <div className="tile">
-          <p className="caption">Сейчас</p>
-          <p className="font-semibold text-ink">{ROLE_LABELS[s.role]}</p>
+          <p className="caption">{t('Сейчас')}</p>
+          <p className="font-semibold text-ink">{t(ROLE_LABELS[s.role])}</p>
         </div>
         <div className="tile bg-accent-100">
-          <p className="caption">Станет</p>
-          <p className="font-semibold text-accent-700">{ROLE_LABELS[role]}</p>
+          <p className="caption">{t('Станет')}</p>
+          <p className="font-semibold text-accent-700">{t(ROLE_LABELS[role])}</p>
         </div>
       </div>
-      {removed.length > 0 && <PermList title={`Уберутся · ${removed.length}`} items={removed} tone="bad" />}
-      {added.length > 0 && <PermList title={`Добавятся · ${added.length}`} items={added} tone="ok" />}
-      {kept.length > 0 && <PermList title="Останется" items={kept} tone="neutral" />}
+      {removed.length > 0 && <PermList title={`${t('Уберутся')} · ${removed.length}`} items={removed} tone="bad" />}
+      {added.length > 0 && <PermList title={`${t('Добавятся')} · ${added.length}`} items={added} tone="ok" />}
+      {kept.length > 0 && <PermList title={t('Останется')} items={kept} tone="neutral" />}
       <p className="body-text">
-        Решения, которые сотрудник принял раньше, не отменятся. Новая роль действует сразу — без повторного входа.
-        Смена роли попадёт в журнал с вашим именем.
+        {t('Решения, которые сотрудник принял раньше, не отменятся. Новая роль действует сразу — без повторного входа. Смена роли попадёт в журнал с вашим именем.')}
       </p>
       <ErrorLine text={error} />
     </Dialog>
@@ -779,6 +797,7 @@ function RoleDialog({
 function PermList({ title, items, tone }: { title: string; items: { label: string }[]; tone: 'ok' | 'bad' | 'neutral' }) {
   const mark = tone === 'bad' ? '✕' : '✓';
   const color = tone === 'bad' ? 'text-[#B42318]' : tone === 'ok' ? 'text-ok' : 'text-body';
+  const { t } = useI18n();
   return (
     <section>
       <h3 className="overtitle mb-1.5">{title}</h3>
@@ -788,7 +807,7 @@ function PermList({ title, items, tone }: { title: string; items: { label: strin
             <span aria-hidden="true" className={`font-semibold shrink-0 ${color}`}>
               {mark}
             </span>
-            {p.label}
+            {t(p.label)}
           </li>
         ))}
       </ul>
@@ -805,6 +824,7 @@ function DisableDialog({ target, onClose, onDone }: { target: Staff | null; onCl
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useI18n();
   useEffect(() => {
     setReason('');
     setError('');
@@ -831,8 +851,8 @@ function DisableDialog({ target, onClose, onDone }: { target: Staff | null; onCl
     <Dialog
       open
       onClose={onClose}
-      title="Отключить доступ?"
-      sub={`${target.full_name} · ${ROLE_LABELS[target.role].toLowerCase()} · ${target.email}`}
+      title={t('Отключить доступ?')}
+      sub={`${target.full_name} · ${t(ROLE_LABELS[target.role]).toLowerCase()} · ${target.email}`}
       footer={
         <>
           <button
@@ -841,26 +861,26 @@ function DisableDialog({ target, onClose, onDone }: { target: Staff | null; onCl
             className="btn bg-[#B42318] text-white hover:bg-[#931B12] hover:text-white flex-1 sm:flex-none"
             disabled={busy || !reason.trim()}
           >
-            {busy ? 'Отключаем…' : 'Отключить'}
+            {busy ? t('Отключаем…') : t('Отключить')}
           </button>
           <button type="button" className="btn btn-ghost flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
-            Отмена
+            {t('Отмена')}
           </button>
         </>
       }
     >
       <section className="tile">
-        <h3 className="overtitle mb-1.5">Что произойдёт</h3>
+        <h3 className="overtitle mb-1.5">{t('Что произойдёт')}</h3>
         <ul className="flex flex-col gap-1.5 text-sm leading-5 text-ink list-disc pl-5">
-          <li>Все сессии завершатся сразу — панель закроется на всех устройствах</li>
-          <li>Войти не получится, пока суперадмин снова не включит доступ</li>
-          <li>Решения сотрудника останутся в журнале и в истории мечетей, сборов и отчётов</li>
-          <li>Очереди не пострадают: заявки, сборы и отчёты разберут другие модераторы</li>
+          <li>{t('Все сессии завершатся сразу — панель закроется на всех устройствах')}</li>
+          <li>{t('Войти не получится, пока суперадмин снова не включит доступ')}</li>
+          <li>{t('Решения сотрудника останутся в журнале и в истории мечетей, сборов и отчётов')}</li>
+          <li>{t('Очереди не пострадают: заявки, сборы и отчёты разберут другие модераторы')}</li>
         </ul>
       </section>
       <form id="disable-form" onSubmit={submit}>
         <label htmlFor="disable-reason" className="label">
-          Причина — её увидят суперадмины в журнале <span className="caption">(обязательно)</span>
+          {t('Причина — её увидят суперадмины в журнале')} <span className="caption">{t('(обязательно)')}</span>
         </label>
         <textarea
           id="disable-reason"
@@ -871,10 +891,10 @@ function DisableDialog({ target, onClose, onDone }: { target: Staff | null; onCl
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           aria-describedby="disable-reason-count"
-          placeholder="Например: переходит в другой отдел Комитета"
+          placeholder={t('Например: переходит в другой отдел Комитета')}
         />
         <p id="disable-reason-count" className="caption mt-1.5 flex justify-between gap-3">
-          <span>Без причины доступ не отключится</span>
+          <span>{t('Без причины доступ не отключится')}</span>
           <span className="tabular">
             {reason.length} / {REASON_MAX}
           </span>
@@ -899,6 +919,7 @@ function ResetDialog({
   const { call } = useAdmin();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useI18n();
   useEffect(() => setError(''), [target]);
   if (!target) return <Dialog open={false} onClose={onClose} title="">{null}</Dialog>;
 
@@ -920,15 +941,15 @@ function ResetDialog({
     <Dialog
       open
       onClose={onClose}
-      title={reset ? 'Сбросить пароль?' : 'Создать новую ссылку?'}
+      title={t(reset ? 'Сбросить пароль?' : 'Создать новую ссылку?')}
       sub={`${target.full_name} · ${target.email}`}
       footer={
         <>
           <button type="button" className="btn btn-primary flex-1 sm:flex-none" onClick={confirm} disabled={busy}>
-            {busy ? 'Создаём…' : reset ? 'Сбросить пароль' : 'Создать ссылку'}
+            {busy ? t('Создаём…') : t(reset ? 'Сбросить пароль' : 'Создать ссылку')}
           </button>
           <button type="button" className="btn btn-ghost flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
-            Отмена
+            {t('Отмена')}
           </button>
         </>
       }
@@ -936,9 +957,11 @@ function ResetDialog({
       <div className={`infobox ${reset ? 'bg-[#FDF0DC] text-[#A35A00]' : ''}`}>
         {reset ? <IconAlert size={18} className="shrink-0 mt-px" /> : <IconInfo size={18} className="shrink-0 mt-px" />}
         <span>
-          {reset
-            ? 'Старый пароль сразу перестанет работать, а панель закроется на всех устройствах сотрудника. Он задаст новый пароль по ссылке, которую вы ему передадите.'
-            : 'Прежняя ссылка-приглашение перестанет работать. Новая действует 72 часа.'}
+          {t(
+            reset
+              ? 'Старый пароль сразу перестанет работать, а панель закроется на всех устройствах сотрудника. Он задаст новый пароль по ссылке, которую вы ему передадите.'
+              : 'Прежняя ссылка-приглашение перестанет работать. Новая действует 72 часа.',
+          )}
         </span>
       </div>
       <ErrorLine text={error} />

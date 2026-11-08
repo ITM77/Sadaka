@@ -4,18 +4,9 @@ import { notFound } from 'next/navigation';
 import DonateForm from '@/components/DonateForm';
 import ProgressBar from '@/components/ProgressBar';
 import { IconCheck, IconChevronRight, IconMosque, IconReport, IconShield } from '@/components/icons';
-import {
-  apiFetchOrNull,
-  Campaign,
-  CATEGORY_LABELS,
-  daysLeft,
-  formatDate,
-  formatMoney,
-  lastDay,
-  plural,
-  progress,
-  Report,
-} from '@/lib/api';
+import { apiFetchOrNull, Campaign, CATEGORY_LABELS, progress, Report } from '@/lib/api';
+import type { Fmt, I18n } from '@/lib/i18n/core';
+import { getI18n } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +18,7 @@ type Data = {
 
 const load = (id: string) => apiFetchOrNull<Data>(`/campaigns/${encodeURIComponent(id)}`);
 
+/** «9 ноября, 09:20» — русский формат даты последних пожертвований (для tg — fmt.short). */
 const whenFmt = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
   month: 'long',
@@ -36,14 +28,16 @@ const whenFmt = new Intl.DateTimeFormat('ru-RU', {
 });
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { t } = getI18n();
   const data = await load(params.id);
   return {
-    title: data ? `${data.campaign.title} — Садака` : 'Кампания не найдена — Садака',
+    title: data ? t('{name} — Садака', { name: data.campaign.title }) : t('Кампания не найдена — Садака'),
     description: data?.campaign.description.slice(0, 160),
   };
 }
 
 export default async function CampaignPage({ params }: { params: { id: string } }) {
+  const { t, fmt, lang } = getI18n();
   const data = await load(params.id);
   if (!data) notFound();
   const { campaign, recent_donations, report } = data;
@@ -54,19 +48,22 @@ export default async function CampaignPage({ params }: { params: { id: string } 
     now >= new Date(campaign.start_date).getTime() &&
     now < new Date(campaign.end_date).getTime();
   const completed = campaign.status === 'completed';
-  const days = daysLeft(campaign.end_date, now);
+  const days = fmt.daysLeft(campaign.end_date, now);
   const mosque = campaign.mosque;
 
   return (
     <div className="page">
-      <nav aria-label="Навигация" className="caption !text-[13px] flex flex-wrap gap-x-1.5 pt-1 md:pt-0">
-        <Link href="/campaigns" className="text-muted hover:text-accent-700">
-          Сборы
+      <nav aria-label={t('Навигация')} className="caption !text-[13px] flex flex-wrap items-center gap-x-1.5 pt-1 md:pt-0">
+        <Link href="/campaigns" className="inline-flex items-center min-h-11 -my-3 text-muted hover:text-accent-700">
+          {t('Сборы')}
         </Link>
         {mosque && (
           <>
             <span aria-hidden="true">·</span>
-            <Link href={`/mosques/${campaign.mosque_id}`} className="text-muted hover:text-accent-700">
+            <Link
+              href={`/mosques/${campaign.mosque_id}`}
+              className="inline-flex items-center min-h-11 -my-3 min-w-0 break-words text-muted hover:text-accent-700"
+            >
               {mosque.name}
             </Link>
           </>
@@ -78,31 +75,35 @@ export default async function CampaignPage({ params }: { params: { id: string } 
       <div className="layout-aside mt-4">
         <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
           {/* Ход сбора */}
-          <section aria-label="Ход сбора" className="order-1 panel">
+          <section aria-label={t('Ход сбора')} className="order-1 panel">
             <div className="flex flex-wrap gap-1.5">
-              <span className="badge badge-sec">{CATEGORY_LABELS[campaign.category] ?? campaign.category}</span>
+              <span className="badge badge-sec">{t(CATEGORY_LABELS[campaign.category] ?? campaign.category)}</span>
               <span className="badge badge-success">
                 <IconShield size={14} strokeWidth={2.25} />
-                Одобрено Комитетом улемов
+                {t('Одобрено Комитетом улемов')}
               </span>
-              {completed && <span className="badge badge-neutral">Сбор завершён</span>}
+              {completed && <span className="badge badge-neutral">{t('Сбор завершён')}</span>}
             </div>
             <div className="mt-3.5 flex flex-wrap items-baseline justify-between gap-x-3">
-              <span className="num-lg">{formatMoney(campaign.current_amount)}</span>
-              <span className="body-text tabular">из {formatMoney(campaign.goal_amount)}</span>
+              <span className="num-lg">{fmt.money(campaign.current_amount)}</span>
+              <span className="body-text tabular">{t('из {sum}', { sum: fmt.money(campaign.goal_amount) })}</span>
             </div>
             <div className="mt-2.5">
               <ProgressBar value={pct} />
             </div>
             <dl className="grid grid-cols-3 gap-2 mt-3.5">
-              <Stat value={`${pct}%`} label="цели" />
+              <Stat value={`${pct}%`} label={t('цели')} />
               <Stat
                 value={String(campaign.donation_count)}
-                label={plural(campaign.donation_count, ['взнос', 'взноса', 'взносов'])}
+                label={fmt.plural(campaign.donation_count, ['взнос', 'взноса', 'взносов'])}
               />
               <Stat
                 value={completed ? '—' : String(days)}
-                label={completed ? 'сбор завершён' : `${plural(days, ['день', 'дня', 'дней'])} осталось`}
+                label={
+                  completed
+                    ? t('сбор завершён')
+                    : t('{days} осталось', { days: fmt.plural(days, ['день', 'дня', 'дней']) })
+                }
               />
             </dl>
           </section>
@@ -110,7 +111,7 @@ export default async function CampaignPage({ params }: { params: { id: string } 
           {/* О сборе */}
           <section aria-labelledby="about-campaign" className="order-4 panel">
             <h2 id="about-campaign" className="overtitle">
-              О сборе
+              {t('О сборе')}
             </h2>
             <p className="body-text mt-3 whitespace-pre-line">{campaign.description}</p>
             {mosque && (
@@ -133,30 +134,30 @@ export default async function CampaignPage({ params }: { params: { id: string } 
             )}
             <dl className="kv mt-2">
               <div>
-                <dt className="text-body">Начало</dt>
-                <dd className="font-medium text-right">{formatDate(campaign.start_date)}</dd>
+                <dt className="text-body">{t('Начало')}</dt>
+                <dd className="font-medium text-right">{fmt.date(campaign.start_date)}</dd>
               </div>
               <div>
-                <dt className="text-body">Последний день</dt>
-                <dd className="font-medium text-right">{lastDay(campaign.end_date)}</dd>
+                <dt className="text-body">{t('Последний день')}</dt>
+                <dd className="font-medium text-right">{fmt.lastDay(campaign.end_date)}</dd>
               </div>
             </dl>
           </section>
 
           {/* Отчёт */}
           {report ? (
-            <ReportSection report={report} />
+            <ReportSection report={report} t={t} fmt={fmt} />
           ) : (
             <section className="order-5 panel flex gap-3 items-start">
               <span className="icon-tile" aria-hidden="true">
                 <IconReport />
               </span>
               <div className="min-w-0">
-                <h2 className="title-sm">Отчёт мечети</h2>
+                <h2 className="title-sm">{t('Отчёт мечети')}</h2>
                 <p className="body-text mt-1">
                   {completed
-                    ? 'Сбор завершён — мечеть готовит отчёт: статьи расходов, суммы и фото чеков. Пока отчёта нет, мечеть не сможет открыть новый сбор.'
-                    : 'Появится здесь после завершения сбора: статьи расходов, суммы и фото чеков. Пока отчёта нет, мечеть не сможет открыть новый сбор.'}
+                    ? t('Сбор завершён — мечеть готовит отчёт: статьи расходов, суммы и фото чеков. Пока отчёта нет, мечеть не сможет открыть новый сбор.')
+                    : t('Появится здесь после завершения сбора: статьи расходов, суммы и фото чеков. Пока отчёта нет, мечеть не сможет открыть новый сбор.')}
                 </p>
               </div>
             </section>
@@ -166,7 +167,7 @@ export default async function CampaignPage({ params }: { params: { id: string } 
           {recent_donations.length > 0 && (
             <section aria-labelledby="recent-donations" className="order-6 panel">
               <h2 id="recent-donations" className="overtitle">
-                Последние пожертвования
+                {t('Последние пожертвования')}
               </h2>
               <ul className="mt-1.5">
                 {recent_donations.map((d, i) => (
@@ -174,12 +175,14 @@ export default async function CampaignPage({ params }: { params: { id: string } 
                     key={i}
                     className="flex justify-between items-center gap-3 min-h-11 border-b border-line last:border-b-0"
                   >
-                    <span className="body-text">{whenFmt.format(new Date(d.created_at))}</span>
-                    <span className="text-sm font-medium tabular whitespace-nowrap">{formatMoney(d.amount)}</span>
+                    <span className="body-text">
+                      {lang === 'tg' ? fmt.short(d.created_at) : whenFmt.format(new Date(d.created_at))}
+                    </span>
+                    <span className="text-sm font-medium tabular whitespace-nowrap">{fmt.money(d.amount)}</span>
                   </li>
                 ))}
               </ul>
-              <p className="caption mt-2">Имена жертвователей не публикуются.</p>
+              <p className="caption mt-2">{t('Имена жертвователей не публикуются.')}</p>
             </section>
           )}
         </div>
@@ -191,13 +194,13 @@ export default async function CampaignPage({ params }: { params: { id: string } 
           className="order-3 lg:order-none aside-sticky scroll-mt-20 min-w-0 flex flex-col gap-3 lg:gap-4 lg:bg-white lg:rounded-card lg:p-5"
         >
           <h2 id="donate-title" className="sr-only lg:not-sr-only title-sm">
-            Пожертвовать
+            {t('Пожертвовать')}
           </h2>
           {open ? (
             <DonateForm campaignId={campaign.id} campaignTitle={campaign.title} mosqueName={mosque?.name} />
           ) : (
             <p className="bg-white rounded-card p-4 lg:p-0 lg:rounded-none body-text">
-              {completed ? 'Сбор завершён. Спасибо всем, кто помог!' : 'Сбор сейчас не принимает пожертвования.'}
+              {completed ? t('Сбор завершён. Спасибо всем, кто помог!') : t('Сбор сейчас не принимает пожертвования.')}
             </p>
           )}
         </aside>
@@ -215,7 +218,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function ReportSection({ report }: { report: Report }) {
+function ReportSection({ report, t, fmt }: { report: Report; t: I18n['t']; fmt: Fmt }) {
   const approved = report.status === 'approved';
   return (
     <section id="report" aria-labelledby="report-title" className="order-5 panel scroll-mt-24 flex flex-col gap-3.5">
@@ -225,15 +228,15 @@ function ReportSection({ report }: { report: Report }) {
         </span>
         <div className="flex-[1_1_200px] min-w-0">
           <h2 id="report-title" className="title-sm">
-            Отчёт мечети
+            {t('Отчёт мечети')}
           </h2>
           <p className="caption mt-0.5">
-            {report.title} · {formatDate(report.submitted_at)}
+            {report.title} · {fmt.date(report.submitted_at)}
           </p>
         </div>
         <span className={approved ? 'badge badge-success' : 'badge badge-warning'}>
           {approved && <IconCheck size={14} strokeWidth={2.25} />}
-          {approved ? 'Проверен Комитетом' : 'На проверке у Комитета'}
+          {approved ? t('Проверен Комитетом') : t('На проверке у Комитета')}
         </span>
       </div>
 
@@ -241,15 +244,15 @@ function ReportSection({ report }: { report: Report }) {
 
       <dl className="grid grid-cols-2 gap-2">
         <div className="tile py-3">
-          <dt className="caption !text-body">Собрано</dt>
+          <dt className="caption !text-body">{t('Собрано')}</dt>
           <dd className="text-lg leading-6 font-semibold tabular whitespace-nowrap">
-            {formatMoney(report.total_collected)}
+            {fmt.money(report.total_collected)}
           </dd>
         </div>
         <div className="tile py-3">
-          <dt className="caption !text-body">Потрачено</dt>
+          <dt className="caption !text-body">{t('Потрачено')}</dt>
           <dd className="text-lg leading-6 font-semibold tabular whitespace-nowrap">
-            {formatMoney(report.total_spent)}
+            {fmt.money(report.total_spent)}
           </dd>
         </div>
       </dl>
@@ -257,14 +260,14 @@ function ReportSection({ report }: { report: Report }) {
       {report.expenses.length > 0 && (
         <div className="bg-app rounded-tile px-3.5 py-1 overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="sr-only">Расходы по сбору</caption>
+            <caption className="sr-only">{t('Расходы по сбору')}</caption>
             <thead>
               <tr className="text-left text-body border-b border-white">
                 <th scope="col" className="py-2.5 font-normal">
-                  Статья расходов
+                  {t('Статья расходов')}
                 </th>
                 <th scope="col" className="py-2.5 font-normal text-right">
-                  Сумма
+                  {t('Сумма')}
                 </th>
               </tr>
             </thead>
@@ -272,7 +275,7 @@ function ReportSection({ report }: { report: Report }) {
               {report.expenses.map((e, i) => (
                 <tr key={i} className="border-b border-white last:border-b-0">
                   <td className="py-3 pr-4 text-ink">{e.item}</td>
-                  <td className="py-3 text-right font-medium tabular whitespace-nowrap">{formatMoney(e.cost)}</td>
+                  <td className="py-3 text-right font-medium tabular whitespace-nowrap">{fmt.money(e.cost)}</td>
                 </tr>
               ))}
             </tbody>
@@ -282,12 +285,12 @@ function ReportSection({ report }: { report: Report }) {
 
       {report.photo_urls.length > 0 && (
         <div>
-          <h3 className="overtitle">Фото подтверждения</h3>
+          <h3 className="overtitle">{t('Фото подтверждения')}</h3>
           <ul className="flex flex-wrap gap-1.5 mt-2.5">
             {report.photo_urls.map((url, i) => (
               <li key={i}>
                 <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="chip min-h-11">
-                  Фото {i + 1}
+                  {t('Фото {n}', { n: i + 1 })}
                 </a>
               </li>
             ))}

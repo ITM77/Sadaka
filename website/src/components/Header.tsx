@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { LangSwitch, useI18n } from '@/lib/i18n/client';
 import Logo from './Logo';
 import { IconHeart, IconHome, IconLandmark, IconUser } from './icons';
 
@@ -19,6 +20,7 @@ function isActive(pathname: string, href: string) {
 }
 
 export default function Header() {
+  const { t } = useI18n();
   const pathname = usePathname() ?? '/';
   const { user, ready } = useAuth();
   const signedIn = ready && !!user;
@@ -38,34 +40,37 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-white">
-        <div className="max-w-[1240px] mx-auto h-14 lg:h-16 px-4 lg:px-8 flex items-center justify-between gap-4">
-          <Logo />
+        <div className="max-w-[1240px] mx-auto h-14 lg:h-16 px-4 lg:px-8 flex items-center justify-between gap-3 xl:gap-4">
+          <div className="flex items-center gap-2 shrink-0">
+            <Logo />
+            {/* Телефон и планшет: переключатель языка рядом с логотипом */}
+            <LangSwitch className="lg:hidden shrink-0 !p-0.5 [&>button]:min-h-11" />
+          </div>
 
-          <nav aria-label="Основное меню" className="hidden lg:flex segmented !flex-none">
+          <nav aria-label={t('Основное меню')} className="hidden lg:flex segmented !flex-none">
             {NAV.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
                 aria-current={isActive(pathname, n.href) ? 'page' : undefined}
-                className="!px-[18px] hover:text-accent-700"
+                className="!px-2 xl:!px-[18px] hover:text-accent-700"
               >
-                {n.label}
+                {t(n.label)}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/contact"
-              className="hidden lg:inline-flex btn btn-secondary min-h-[44px] px-4"
-            >
-              Контакты
+          <div className="flex items-center gap-2 shrink-0">
+            <LangSwitch className="hidden lg:inline-flex" />
+            <Link href="/contact" className="hidden lg:inline-flex btn btn-secondary min-h-[44px] px-4">
+              {t('Контакты')}
             </Link>
+            {/* На телефоне вход и профиль — в нижней панели вкладок */}
             <Link
               href={signedIn ? '/profile' : '/login'}
-              className="btn btn-secondary min-h-[44px] px-[18px]"
+              className="hidden sm:inline-flex btn btn-secondary min-h-[44px] px-[18px]"
             >
-              {signedIn ? 'Мои добрые дела' : 'Войти'}
+              {signedIn ? t('Мои добрые дела') : t('Войти')}
             </Link>
           </div>
         </div>
@@ -73,28 +78,28 @@ export default function Header() {
 
       {/* Телефон: нижняя панель вкладок */}
       <nav
-        aria-label="Разделы"
+        aria-label={t('Разделы')}
         className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white flex px-2 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))] shadow-lg"
       >
-        {tabs.map((t) => {
-          const Icon = t.icon;
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
           return (
             <Link
-              key={t.label}
-              href={t.href}
-              aria-current={t.active ? 'page' : undefined}
-              className={`flex-1 min-h-[52px] flex flex-col items-center justify-center gap-[3px] ${
-                t.active ? 'text-accent-700 hover:text-accent-700' : 'text-muted hover:text-ink'
+              key={tab.label}
+              href={tab.href}
+              aria-current={tab.active ? 'page' : undefined}
+              className={`flex-1 min-w-0 min-h-[52px] flex flex-col items-center justify-center gap-[3px] ${
+                tab.active ? 'text-accent-700 hover:text-accent-700' : 'text-muted hover:text-ink'
               }`}
             >
               <span
                 className={`w-[52px] h-[30px] rounded-full flex items-center justify-center ${
-                  t.active ? 'bg-accent-100' : ''
+                  tab.active ? 'bg-accent-100' : ''
                 }`}
               >
                 <Icon />
               </span>
-              <span className="text-[11px] leading-[15px] font-medium">{t.label}</span>
+              <span className="text-[11px] leading-[15px] font-medium text-center">{t(tab.label)}</span>
             </Link>
           );
         })}

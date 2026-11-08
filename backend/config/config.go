@@ -19,6 +19,11 @@ type Config struct {
 	// CORS: список разрешённых origin через запятую ("*" — любые, только для разработки).
 	CORSOrigins []string
 
+	// Прокси, которым можно верить в X-Forwarded-For (IP/CIDR через запятую).
+	// Пусто — заголовок игнорируется, IP берётся из соединения: иначе любой
+	// клиент подставит в журнал действий чужой адрес.
+	TrustedProxies []string
+
 	// Платёжный провайдер: "mock" (разработка) — пока единственный.
 	// Alif / IMON подключаются отдельно.
 	PaymentProvider string
@@ -54,6 +59,12 @@ func Load() (*Config, error) {
 	for _, o := range strings.Split(getEnv("CORS_ORIGINS", "*"), ",") {
 		if o = strings.TrimSpace(o); o != "" {
 			cfg.CORSOrigins = append(cfg.CORSOrigins, o)
+		}
+	}
+
+	for _, p := range strings.Split(os.Getenv("TRUSTED_PROXIES"), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			cfg.TrustedProxies = append(cfg.TrustedProxies, p)
 		}
 	}
 

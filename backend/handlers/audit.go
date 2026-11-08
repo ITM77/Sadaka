@@ -273,15 +273,32 @@ func (h *Handler) AdminExportAudit(c *gin.Context) {
 	w := csv.NewWriter(c.Writer)
 	w.Comma = ';'
 	_ = w.Write([]string{"Время (Душанбе)", "Сотрудник", "Роль", "Действие", "Объект", "Тип объекта",
-		"Подробности", "Статус до", "Статус после", "Причина", "IP"})
+		"Где / email", "Статус до", "Статус после", "Причина", "Подробности", "IP"})
 	for _, e := range entries {
-		_ = w.Write([]string{
+		row := []string{
 			e.CreatedAt.In(Dushanbe).Format("02.01.2006 15:04:05"), e.ActorName, roleLabel(e.ActorRole),
 			actionLabel(e.Action), e.ObjectTitle, objectLabel(e.ObjectType), e.ObjectSubtitle,
-			e.FromStatus, e.ToStatus, e.Reason, e.IP,
-		})
+			e.FromStatus, e.ToStatus, e.Reason, e.Details, e.IP,
+		}
+		for i := range row {
+			row[i] = csvSafe(row[i])
+		}
+		_ = w.Write(row)
 	}
 	w.Flush()
+}
+
+// csvSafe не даёт Excel выполнить ячейку как формулу: название мечети или
+// причина вида «=HYPERLINK(…)» иначе сработает у суперадмина при открытии файла.
+func csvSafe(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
 }
 
 // GET /admin/mosques/:id/history — все события мечети, сначала старые.
@@ -304,6 +321,10 @@ func (h *Handler) AdminMosqueHistory(c *gin.Context) {
 	if err := h.DB.Where("mosque_id = ?", id).Order("created_at ASC").Limit(500).Find(&entries).Error; err != nil {
 		utils.InternalError(c, err)
 		return
+	}
+	// IP и браузер сотрудников — только в журнале (суперадмин), не в общей истории.
+	for i := range entries {
+		entries[i].IP, entries[i].UserAgent = "", ""
 	}
 	c.JSON(http.StatusOK, gin.H{"entries": entries})
 }

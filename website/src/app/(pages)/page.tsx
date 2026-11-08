@@ -3,7 +3,8 @@ import CampaignCard from '@/components/CampaignCard';
 import MosqueRow from '@/components/donor/MosqueRow';
 import { categoryIcon } from '@/components/donor/categoryIcons';
 import { IconChevronDown, IconSavob, IconSearch, IconShield } from '@/components/icons';
-import { apiFetch, Campaign, CATEGORY_LABELS, Mosque, plural } from '@/lib/api';
+import { apiFetch, Campaign, CATEGORY_LABELS, Mosque } from '@/lib/api';
+import { getI18n } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ const FAQ = [
 ];
 
 export default async function Home() {
+  const { t, fmt } = getI18n();
   const [campaignData, mosqueData] = await Promise.all([
     load<{ campaigns: Campaign[]; total: number }>('/campaigns?limit=100'),
     load<{ mosques: Mosque[]; total: number }>('/mosques?limit=100'),
@@ -67,17 +69,17 @@ export default async function Home() {
             className="flex flex-col gap-3 md:gap-0 md:bg-white md:rounded-card md:p-7"
           >
             <h1 id="home-title" className="title pt-1 md:pt-0">
-              Какой мечети поможем?
+              {t('Какой мечети поможем?')}
             </h1>
             <p className="body-text md:mt-1.5">
               {mosqueTotal > 0 &&
-                `${mosqueTotal} ${plural(mosqueTotal, ['проверенная мечеть', 'проверенные мечети', 'проверенных мечетей'])}. `}
-              Деньги идут прямо на сбор мечети, а мечеть отчитывается о расходах.
+                `${mosqueTotal} ${fmt.plural(mosqueTotal, ['проверенная мечеть', 'проверенные мечети', 'проверенных мечетей'])}. `}
+              {t('Деньги идут прямо на сбор мечети, а мечеть отчитывается о расходах.')}
             </p>
 
             <form role="search" action="/mosques" className="flex flex-wrap gap-2 md:mt-[18px]">
               <label className="relative basis-full sm:basis-auto sm:flex-[1_1_240px] min-w-0">
-                <span className="sr-only">Название мечети</span>
+                <span className="sr-only">{t('Название мечети')}</span>
                 <IconSearch
                   size={18}
                   className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
@@ -85,14 +87,14 @@ export default async function Home() {
                 <input
                   type="search"
                   name="q"
-                  placeholder="Название мечети"
+                  placeholder={t('Название мечети')}
                   className="input-white md:bg-app pl-10"
                 />
               </label>
               <label className="flex-1 sm:flex-[0_1_220px] min-w-0">
-                <span className="sr-only">Город</span>
+                <span className="sr-only">{t('Город')}</span>
                 <select name="city" defaultValue="" className="input-white md:bg-app">
-                  <option value="">Все города</option>
+                  <option value="">{t('Все города')}</option>
                   {cities.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -101,7 +103,7 @@ export default async function Home() {
                 </select>
               </label>
               <button type="submit" className="btn btn-primary">
-                Найти
+                {t('Найти')}
               </button>
             </form>
 
@@ -110,7 +112,7 @@ export default async function Home() {
               className="bg-white rounded-card p-4 md:p-0 md:mt-4 md:rounded-none"
             >
               <h2 id="home-categories" className="overtitle md:sr-only">
-                На что собирают
+                {t('На что собирают')}
               </h2>
               <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 md:mt-0">
                 {Object.entries(CATEGORY_LABELS).map(([id, label]) => {
@@ -122,7 +124,7 @@ export default async function Home() {
                         className="tile h-full min-h-[84px] p-3 flex flex-col items-start justify-between gap-2 text-sec hover:text-sec hover:bg-[#DDE7E6] transition-colors"
                       >
                         <Icon />
-                        <span className="text-sm leading-5 font-medium text-ink break-words">{label}</span>
+                        <span className="text-sm leading-5 font-medium text-ink break-words">{t(label)}</span>
                       </Link>
                     </li>
                   );
@@ -136,15 +138,15 @@ export default async function Home() {
             <section aria-labelledby="home-campaigns" className="panel">
               <div className="flex justify-between items-center gap-3">
                 <h2 id="home-campaigns" className="overtitle">
-                  Активные сборы
+                  {t('Активные сборы')}
                 </h2>
-                <Link href="/campaigns" className="link-action inline-flex items-center min-h-11 -my-3">
-                  {campaignTotal > 0 ? `Все ${campaignTotal}` : 'Все сборы'}
+                <Link href="/campaigns" className="link-action inline-flex items-center justify-end min-h-11 min-w-11 -my-3">
+                  {campaignTotal > 0 ? t('Все {n}', { n: campaignTotal }) : t('Все сборы')}
                 </Link>
               </div>
               {campaigns.length === 0 ? (
                 <p className="body-text mt-3">
-                  Сейчас нет активных сборов. Новые появятся после одобрения Комитетом улемов.
+                  {t('Сейчас нет активных сборов. Новые появятся после одобрения Комитетом улемов.')}
                 </p>
               ) : (
                 <div className="grid gap-2 mt-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -161,10 +163,10 @@ export default async function Home() {
             <section aria-labelledby="home-mosques" className="panel pb-2 md:pb-3">
               <div className="flex justify-between items-center gap-3">
                 <h2 id="home-mosques" className="overtitle">
-                  Мечети
+                  {t('Мечети')}
                 </h2>
                 <Link href="/mosques" className="link-action inline-flex items-center min-h-11 -my-3">
-                  Все мечети
+                  {t('Все мечети')}
                 </Link>
               </div>
               <div className="grid mt-1 md:grid-cols-2 md:gap-x-6">
@@ -178,19 +180,19 @@ export default async function Home() {
           {/* Вопросы */}
           <section aria-labelledby="home-faq" className="panel">
             <h2 id="home-faq" className="overtitle">
-              Частые вопросы
+              {t('Частые вопросы')}
             </h2>
             <div className="mt-1">
               {FAQ.map((f) => (
                 <details key={f.q} className="group border-b border-line last:border-b-0">
                   <summary className="flex items-center justify-between gap-4 min-h-[52px] py-2 text-sm leading-5 font-medium text-ink cursor-pointer">
-                    {f.q}
+                    {t(f.q)}
                     <IconChevronDown
                       size={18}
                       className="shrink-0 text-hint transition-transform group-open:rotate-180"
                     />
                   </summary>
-                  <p className="body-text pb-3.5">{f.a}</p>
+                  <p className="body-text pb-3.5">{t(f.a)}</p>
                 </details>
               ))}
             </div>
@@ -198,27 +200,27 @@ export default async function Home() {
         </div>
 
         {/* ---------- Правая колонка ---------- */}
-        <aside className="aside-sticky flex flex-col gap-3 min-w-0" aria-label="О платформе">
+        <aside className="aside-sticky flex flex-col gap-3 min-w-0" aria-label={t('О платформе')}>
           <section aria-labelledby="home-savob" className="panel">
             <div className="flex justify-between items-center gap-3">
               <h2 id="home-savob" className="overtitle">
-                Савоб
+                {t('Савоб')}
               </h2>
               <span className="icon-round w-9 h-9" aria-hidden="true">
                 <IconSavob size={18} />
               </span>
             </div>
-            <p className="flex items-baseline gap-2 mt-2">
-              <span className="num-lg">1 балл</span>
-              <span className="title-sm">за каждые 10 с.</span>
+            <p className="flex flex-wrap items-baseline gap-x-2 mt-2">
+              <span className="num-lg">{t('1 балл')}</span>
+              <span className="title-sm">{t('за каждые 10 с.')}</span>
             </p>
             <p className="body-text mt-1">
-              Счётчик ваших добрых дел. Баллы не имеют денежной ценности — это история вашей садақа.
+              {t('Счётчик ваших добрых дел. Баллы не имеют денежной ценности — это история вашей садақа.')}
             </p>
             <dl className="kv mt-3.5">
               {MULTIPLIERS.map((m) => (
                 <div key={m.label}>
-                  <dt className="text-body">{m.label}</dt>
+                  <dt className="text-body">{t(m.label)}</dt>
                   <dd className="font-semibold tabular">{m.value}</dd>
                 </div>
               ))}
@@ -227,21 +229,22 @@ export default async function Home() {
 
           <section aria-labelledby="home-for-mosques" className="panel">
             <h2 id="home-for-mosques" className="title-sm">
-              Для мечетей
+              {t('Для мечетей')}
             </h2>
             <p className="body-text mt-1">
-              Подайте заявку, откройте сбор после одобрения Комитетом и отчитайтесь о расходах в кабинете.
+              {t('Подайте заявку, откройте сбор после одобрения Комитетом и отчитайтесь о расходах в кабинете.')}
             </p>
             <Link href="/cabinet/mosques/new" className="btn btn-secondary btn-block mt-3.5">
-              Подать заявку мечети
+              {t('Подать заявку мечети')}
             </Link>
           </section>
 
           <div className="infobox">
             <IconShield size={18} className="shrink-0 mt-px" />
             <span>
-              Каждая мечеть проверена Комитетом улемов. После сбора мечеть публикует отчёт о расходах — без
-              отчёта новый сбор не откроется.
+              {t(
+                'Каждая мечеть проверена Комитетом улемов. После сбора мечеть публикует отчёт о расходах — без отчёта новый сбор не откроется.',
+              )}
             </span>
           </div>
         </aside>
