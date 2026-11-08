@@ -4,15 +4,19 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ComponentType, ReactNode, useEffect } from 'react';
 import Logo from '@/components/Logo';
-import { IconHandHeart, IconHome, IconLandmark, IconLogout, IconReport } from '@/components/icons';
-import { AdminAuthProvider, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
+import { IconClock, IconHandHeart, IconHome, IconLandmark, IconLogout, IconReport, IconUsers } from '@/components/icons';
+import { AdminAuthProvider, canManageStaff, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
 import { AdminStats, AdminStatsProvider, useAdminStats } from './AdminStats';
 
 type NavItem = {
   href: string;
   label: string;
+  /** Подпись в нижней панели телефона, если полная не помещается. */
+  short?: string;
   icon: ComponentType<{ size?: number }>;
   count?: (s: AdminStats) => number;
+  /** Только суперадмину: остальным пункт не показываем, а по прямой ссылке — «Нет прав». */
+  superOnly?: boolean;
 };
 
 const NAV: NavItem[] = [
@@ -20,7 +24,12 @@ const NAV: NavItem[] = [
   { href: '/admin/mosques', label: 'Мечети', icon: IconLandmark, count: (s) => s.mosques_pending },
   { href: '/admin/campaigns', label: 'Кампании', icon: IconHandHeart, count: (s) => s.campaigns_pending },
   { href: '/admin/reports', label: 'Отчёты', icon: IconReport, count: (s) => s.reports_pending },
+  { href: '/admin/staff', label: 'Сотрудники', short: 'Команда', icon: IconUsers, superOnly: true },
+  { href: '/admin/audit', label: 'Журнал', icon: IconClock, superOnly: true },
 ];
+
+/** Страницы без меню и без входа: вход и приглашение. */
+const isPublicPath = (p: string) => p === '/admin/login' || p.startsWith('/admin/invite/');
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -34,7 +43,7 @@ function Guard({ children }: { children: ReactNode }) {
   const { admin, ready } = useAdmin();
   const pathname = usePathname();
   const router = useRouter();
-  const isLogin = pathname === '/admin/login';
+  const isLogin = isPublicPath(pathname);
 
   useEffect(() => {
     if (ready && !admin && !isLogin) router.replace('/admin/login');
@@ -57,7 +66,8 @@ function Guard({ children }: { children: ReactNode }) {
 function useNav() {
   const pathname = usePathname();
   const { stats } = useAdminStats();
-  return NAV.map((n) => ({
+  const { admin } = useAdmin();
+  return NAV.filter((n) => !n.superOnly || canManageStaff(admin)).map((n) => ({
     ...n,
     active: n.href === '/admin' ? pathname === '/admin' : pathname.startsWith(n.href),
     pending: stats && n.count ? n.count(stats) : 0,
@@ -84,7 +94,7 @@ function TopBar() {
               key={n.href}
               href={n.href}
               aria-current={n.active ? 'page' : undefined}
-              className="flex-none gap-2 px-[18px] hover:text-accent-700"
+              className="flex-none gap-2 px-3 xl:px-[18px] hover:text-accent-700"
             >
               {n.label}
               {n.pending > 0 && (
@@ -98,7 +108,7 @@ function TopBar() {
         </nav>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden md:flex flex-col items-end text-right">
+          <div className="hidden md:flex lg:hidden xl:flex flex-col items-end text-right">
             <span className="text-sm leading-5 font-medium text-ink max-w-[200px] truncate">{admin.full_name}</span>
             <span className="caption">{ROLE_LABELS[admin.role]}</span>
           </div>
@@ -151,7 +161,16 @@ function TabBar() {
                 </span>
               )}
             </span>
-            <span className="text-[11px] leading-[15px] font-medium truncate max-w-full">{n.label}</span>
+            <span className="text-[11px] leading-[15px] font-medium truncate max-w-full">
+              {n.short ? (
+                <>
+                  <span aria-hidden="true">{n.short}</span>
+                  <span className="sr-only">{n.label}</span>
+                </>
+              ) : (
+                n.label
+              )}
+            </span>
           </Link>
         );
       })}

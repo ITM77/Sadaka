@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 	"sadaka.tj/backend/models"
 	"sadaka.tj/backend/utils"
 )
@@ -84,15 +86,27 @@ func (h *Handler) SubmitReport(c *gin.Context) {
 	report.ModerationNote = ""
 	report.SubmittedAt = now
 
-	if ended {
-		campaign.Status = models.CampaignStatusCompleted
-		campaign.CompletedAt = &now
-		if err := h.DB.Save(campaign).Error; err != nil {
-			utils.InternalError(c, err)
-			return
-		}
+	prevStatus := ""
+	if report.ID != uuid.Nil {
+		prevStatus = models.ReportStatusRejected
 	}
-	if err := h.DB.Save(&report).Error; err != nil {
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		if ended {
+			campaign.Status = models.CampaignStatusCompleted
+			campaign.CompletedAt = &now
+			if err := tx.Save(campaign).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Save(&report).Error; err != nil {
+			return err
+		}
+		entry := reportLog(&report, campaign, mosque)
+		entry.Action, entry.FromStatus, entry.ToStatus = ActReportSubmit, prevStatus, report.Status
+		entry.Details = "собрано " + som(report.TotalCollected) + ", потрачено " + som(report.TotalSpent)
+		return logMosque(tx, c, entry)
+	})
+	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}

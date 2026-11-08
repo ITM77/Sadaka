@@ -15,6 +15,8 @@ type State = {
   token: string | null;
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Вход готовым токеном — после того как сотрудник задал пароль по приглашению. */
+  startSession: (token: string, admin: Admin) => void;
   logout: () => void;
   /** Обёртка над apiFetch: подставляет токен и выкидывает на вход при 401. */
   call: <T>(path: string, opts?: { method?: string; body?: unknown }) => Promise<T>;
@@ -66,16 +68,41 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setAdmin(null);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiFetch<{ token: string; admin: Admin }>('/admin/auth/login', {
-      method: 'POST',
-      body: { email, password },
-    });
-    store(TOKEN_KEY, res.token);
-    store(ADMIN_KEY, JSON.stringify(res.admin));
-    setToken(res.token);
-    setAdmin(res.admin);
+  const startSession = useCallback((t: string, a: Admin) => {
+    store(TOKEN_KEY, t);
+    store(ADMIN_KEY, JSON.stringify(a));
+    setToken(t);
+    setAdmin(a);
   }, []);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await apiFetch<{ token: string; admin: Admin }>('/admin/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
+      startSession(res.token, res.admin);
+    },
+    [startSession],
+  );
+
+  // Роль могла смениться, а доступ — отключиться: сверяемся с сервером при открытии панели.
+  useEffect(() => {
+    if (!token) return;
+    let alive = true;
+    apiFetch<{ admin: Admin }>('/admin/me', { token })
+      .then((res) => {
+        if (!alive) return;
+        store(ADMIN_KEY, JSON.stringify(res.admin));
+        setAdmin(res.admin);
+      })
+      .catch((e) => {
+        if (alive && e instanceof ApiError && e.status === 401) logout();
+      });
+    return () => {
+      alive = false;
+    };
+  }, [token, logout]);
 
   const call = useCallback(
     async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
@@ -89,7 +116,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     [token, logout],
   );
 
-  const value = useMemo(() => ({ admin, token, ready, login, logout, call }), [admin, token, ready, login, logout, call]);
+  const value = useMemo(
+    () => ({ admin, token, ready, login, startSession, logout, call }),
+    [admin, token, ready, login, startSession, logout, call],
+  );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
@@ -105,5 +135,23 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
   analyst: 'Аналитик',
 };
 
+/** Что даёт роль — для приглашения и подтверждения смены роли. */
+export const ROLE_RIGHTS: Record<AdminRole, string> = {
+  superadmin: 'Всё, что модератор, плюс блокировка мечетей, сотрудники и журнал',
+  moderator: 'Одобряет и отклоняет заявки мечетей, сборы и отчёты',
+  analyst: 'Только смотрит сводку, очереди и реестры — решений не принимает',
+};
+
+/** Права по отдельности: при смене роли видно, что добавится и что уберётся. */
+export const PERMISSIONS: { label: string; roles: AdminRole[] }[] = [
+  { label: 'Видеть сводку, очереди и реестры', roles: ['superadmin', 'moderator', 'analyst'] },
+  { label: 'Одобрять и отклонять заявки мечетей', roles: ['superadmin', 'moderator'] },
+  { label: 'Одобрять и отклонять сборы', roles: ['superadmin', 'moderator'] },
+  { label: 'Принимать и отклонять отчёты', roles: ['superadmin', 'moderator'] },
+  { label: 'Блокировать мечети и снимать блокировку', roles: ['superadmin'] },
+  { label: 'Управлять сотрудниками и смотреть журнал', roles: ['superadmin'] },
+];
+
 export const canModerate = (a: Admin | null) => a?.role === 'superadmin' || a?.role === 'moderator';
 export const canBlock = (a: Admin | null) => a?.role === 'superadmin';
+export const canManageStaff = (a: Admin | null) => a?.role === 'superadmin';

@@ -224,9 +224,19 @@ func (h *Handler) SubmitCampaign(c *gin.Context) {
 		utils.Fail(c, http.StatusConflict, "CAMPAIGN_RULE", err.Error())
 		return
 	}
+	entry := campaignLog(campaign, mosque)
+	entry.Action, entry.FromStatus = ActCampaignSubmit, campaign.Status
+	entry.Details = "цель " + som(campaign.GoalAmount)
 	campaign.Status = models.CampaignStatusPendingApproval
 	campaign.ModerationNote = ""
-	if err := h.DB.Save(campaign).Error; err != nil {
+	entry.ToStatus = campaign.Status
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(campaign).Error; err != nil {
+			return err
+		}
+		return logMosque(tx, c, entry)
+	})
+	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}
@@ -235,7 +245,7 @@ func (h *Handler) SubmitCampaign(c *gin.Context) {
 
 // POST /campaigns/:id/complete — мечеть закрывает активную кампанию.
 func (h *Handler) CompleteCampaign(c *gin.Context) {
-	campaign, _, ok := h.ownedCampaign(c)
+	campaign, mosque, ok := h.ownedCampaign(c)
 	if !ok {
 		return
 	}
@@ -246,7 +256,17 @@ func (h *Handler) CompleteCampaign(c *gin.Context) {
 	now := h.Now()
 	campaign.Status = models.CampaignStatusCompleted
 	campaign.CompletedAt = &now
-	if err := h.DB.Save(campaign).Error; err != nil {
+	entry := campaignLog(campaign, mosque)
+	entry.Action = ActCampaignFinish
+	entry.FromStatus, entry.ToStatus = models.CampaignStatusActive, models.CampaignStatusCompleted
+	entry.Details = "собрано " + som(campaign.CurrentAmount)
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(campaign).Error; err != nil {
+			return err
+		}
+		return logMosque(tx, c, entry)
+	})
+	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}

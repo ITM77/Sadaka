@@ -22,6 +22,7 @@ import {
   Notice,
   StatusBadge,
 } from '@/components/admin/Moderation';
+import MosqueHistory from '@/components/admin/MosqueHistory';
 import { useAdminList } from '@/components/admin/useAdminList';
 import { formatDate, Mosque } from '@/lib/api';
 import { canBlock, canModerate, useAdmin } from '@/lib/adminAuth';
@@ -47,7 +48,8 @@ export default function AdminMosques() {
 }
 
 function List() {
-  const status = useSearchParams().get('status') ?? 'pending';
+  const params = useSearchParams();
+  const status = params.get('status') ?? 'pending';
   const { admin } = useAdmin();
   const { stats, refresh } = useAdminStats();
   const { items, total, error, reload, call } = useAdminList<AdminMosque>(
@@ -55,7 +57,7 @@ function List() {
     'mosques',
   );
   const [notice, setNotice] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params.get('q') ?? ''); // ?q= — переход из журнала
 
   const shown = useMemo(
     () => items?.filter((m) => matches(query, m.name, m.city, m.address)) ?? null,
@@ -169,6 +171,7 @@ function List() {
                       ]}
                     />
                     <DecisionNote note={m.moderation_note} />
+                    <MosqueHistory mosqueId={m.id} />
                     <ModerationActions
                       actions={actionsFor(m)}
                       call={call}

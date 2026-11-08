@@ -56,15 +56,32 @@ func (h *Handler) Router() *gin.Engine {
 
 	// Комитет улемов
 	api.POST("/admin/auth/login", h.AdminLogin)
-	admin := api.Group("/admin", middleware.Auth(h.Cfg.JWTSecret, utils.SubjectAdmin))
+	api.GET("/admin/invite/:token", h.GetInvite)
+	api.POST("/admin/invite/:token", h.AcceptInvite)
+	// adminSession сверяет сотрудника с БД: отключённый доступ и смена роли действуют сразу.
+	admin := api.Group("/admin", middleware.Auth(h.Cfg.JWTSecret, utils.SubjectAdmin), h.adminSession)
 	anyAdmin := middleware.RequireAdminRole(models.AdminRoleSuperadmin, models.AdminRoleModerator, models.AdminRoleAnalyst)
 	moderator := middleware.RequireAdminRole(models.AdminRoleSuperadmin, models.AdminRoleModerator)
 	superadmin := middleware.RequireAdminRole(models.AdminRoleSuperadmin)
 
+	admin.GET("/me", anyAdmin, h.AdminMe)
 	admin.GET("/dashboard", anyAdmin, h.AdminDashboard)
 	admin.GET("/mosques", anyAdmin, h.AdminListMosques)
+	admin.GET("/mosques/:id/history", anyAdmin, h.AdminMosqueHistory)
 	admin.GET("/campaigns", anyAdmin, h.AdminListCampaigns)
 	admin.GET("/reports", anyAdmin, h.AdminListReports)
+
+	// Сотрудники и журнал — только суперадмин.
+	admin.GET("/staff", superadmin, h.AdminListStaff)
+	admin.POST("/staff", superadmin, h.AdminInviteStaff)
+	admin.GET("/staff/:id", superadmin, h.AdminGetStaff)
+	admin.POST("/staff/:id/link", superadmin, h.AdminStaffLink)
+	admin.PUT("/staff/:id/role", superadmin, h.AdminStaffRole)
+	admin.POST("/staff/:id/disable", superadmin, h.AdminStaffDisable)
+	admin.POST("/staff/:id/enable", superadmin, h.AdminStaffEnable)
+	admin.GET("/audit", superadmin, h.AdminListAudit)
+	admin.GET("/audit/export", superadmin, h.AdminExportAudit)
+	admin.GET("/audit/:id", superadmin, h.AdminGetAudit)
 
 	admin.POST("/mosques/:id/approve", moderator, h.AdminApproveMosque)
 	admin.POST("/mosques/:id/reject", moderator, h.AdminRejectMosque)

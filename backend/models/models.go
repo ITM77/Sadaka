@@ -50,16 +50,33 @@ const (
 	AdminRoleAnalyst    = "analyst"    // только просмотр
 )
 
+// AdminRoles — допустимые значения Admin.Role.
+var AdminRoles = map[string]bool{AdminRoleSuperadmin: true, AdminRoleModerator: true, AdminRoleAnalyst: true}
+
 // Admin — сотрудник Комитета улемов.
+// Приглашённый сотрудник живёт без пароля (PasswordHash = ""), пока не задаст
+// его по ссылке; тот же путь — при сбросе пароля суперадмином.
 type Admin struct {
 	Base
 	Email        string     `gorm:"size:255;uniqueIndex;not null" json:"email"`
 	FullName     string     `gorm:"size:255;not null" json:"full_name"`
-	PasswordHash string     `gorm:"size:255;not null" json:"-"`
+	PasswordHash string     `gorm:"size:255;not null;default:''" json:"-"`
 	Role         string     `gorm:"size:20;not null;default:moderator" json:"role"`
 	IsActive     bool       `gorm:"not null;default:true" json:"is_active"`
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+
+	InvitedByID     *uuid.UUID `gorm:"type:uuid" json:"invited_by_id,omitempty"`
+	InviteTokenHash string     `gorm:"size:64;index" json:"-"` // sha256 ссылки-приглашения
+	InviteExpiresAt *time.Time `json:"invite_expires_at,omitempty"`
+	// Токены, выданные раньше этого момента, не принимаются: так отключение
+	// доступа и сброс пароля сразу закрывают панель на всех устройствах.
+	SessionsValidFrom *time.Time `json:"-"`
+	DisabledAt        *time.Time `json:"disabled_at,omitempty"`
+	DisabledReason    string     `gorm:"type:text" json:"disabled_reason,omitempty"`
 }
+
+// HasPassword — сотрудник уже задал пароль и может входить.
+func (a *Admin) HasPassword() bool { return a.PasswordHash != "" }
 
 // ---------- Мечети ----------
 
@@ -199,10 +216,61 @@ type SavobEntry struct {
 	EventType     string    `gorm:"size:30;not null;default:regular" json:"event_type"`
 }
 
+// ---------- Журнал действий ----------
+
+// Кто совершил действие.
+const (
+	ActorAdmin  = "admin"  // сотрудник Комитета
+	ActorMosque = "mosque" // представитель мечети
+)
+
+// Типы объектов журнала.
+const (
+	ObjectMosque   = "mosque"
+	ObjectCampaign = "campaign"
+	ObjectReport   = "report"
+	ObjectAdmin    = "admin"
+)
+
+// AuditLog — неизменяемая запись о решении или событии. Имя и роль автора,
+// название объекта копируются на момент действия: запись не меняется,
+// даже если потом переименуют мечеть или сменят роль сотрудника.
+type AuditLog struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	CreatedAt time.Time `gorm:"index" json:"created_at"`
+
+	ActorType string     `gorm:"size:10;not null;index" json:"actor_type"`
+	AdminID   *uuid.UUID `gorm:"type:uuid;index" json:"admin_id,omitempty"`
+	ActorName string     `gorm:"size:255;not null" json:"actor_name"`
+	ActorRole string     `gorm:"size:20" json:"actor_role,omitempty"`
+
+	Action         string     `gorm:"size:40;not null;index" json:"action"`
+	ObjectType     string     `gorm:"size:20;not null;index" json:"object_type"`
+	ObjectID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"object_id"`
+	ObjectTitle    string     `gorm:"size:255;not null" json:"object_title"`
+	ObjectSubtitle string     `gorm:"size:500" json:"object_subtitle,omitempty"`
+	MosqueID       *uuid.UUID `gorm:"type:uuid;index" json:"mosque_id,omitempty"`
+
+	FromStatus string `gorm:"size:25" json:"from_status,omitempty"`
+	ToStatus   string `gorm:"size:25" json:"to_status,omitempty"`
+	Reason     string `gorm:"type:text" json:"reason,omitempty"`
+	Details    string `gorm:"size:500" json:"details,omitempty"`
+
+	IP        string `gorm:"size:64" json:"ip,omitempty"`
+	UserAgent string `gorm:"size:500" json:"user_agent,omitempty"`
+}
+
+func (a *AuditLog) BeforeCreate(*gorm.DB) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	return nil
+}
+
 // All — список моделей для AutoMigrate.
 func All() []any {
 	return []any{
 		&User{}, &Admin{}, &Mosque{}, &Campaign{}, &Transaction{},
-		&Report{}, &SavobBalance{}, &SavobEntry{},
+		&Report{}, &SavobBalance{}, &SavobEntry{}, &AuditLog{},
 	}
 }

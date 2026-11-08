@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ const (
 	ctxAccountID = "account_id"
 	ctxKind      = "account_kind"
 	ctxAdminRole = "admin_role"
+	ctxIssuedAt  = "issued_at"
 )
 
 // Auth требует валидный JWT нужного типа (utils.SubjectUser / utils.SubjectAdmin).
@@ -40,8 +42,22 @@ func Auth(secret, kind string) gin.HandlerFunc {
 		c.Set(ctxAccountID, id)
 		c.Set(ctxKind, claims.Kind)
 		c.Set(ctxAdminRole, claims.AdminRole)
+		if claims.IssuedAt != nil {
+			c.Set(ctxIssuedAt, claims.IssuedAt.Time)
+		}
 		c.Next()
 	}
+}
+
+// SetAdminRole заменяет роль из токена актуальной ролью из БД:
+// смена роли действует сразу, без повторного входа.
+func SetAdminRole(c *gin.Context, role string) { c.Set(ctxAdminRole, role) }
+
+// IssuedAt — время выдачи токена (нулевое, если в токене его нет).
+func IssuedAt(c *gin.Context) time.Time {
+	v, _ := c.Get(ctxIssuedAt)
+	t, _ := v.(time.Time)
+	return t
 }
 
 // RequireAdminRole пропускает только админов с одной из перечисленных ролей.

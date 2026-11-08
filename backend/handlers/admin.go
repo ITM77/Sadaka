@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"sadaka.tj/backend/models"
 	"sadaka.tj/backend/services"
 	"sadaka.tj/backend/utils"
@@ -106,7 +107,7 @@ func (h *Handler) AdminListMosques(c *gin.Context) {
 }
 
 // moderateMosque меняет статус мечети, если текущий статус в списке from.
-func (h *Handler) moderateMosque(c *gin.Context, from []string, to string, reasonRequired bool) {
+func (h *Handler) moderateMosque(c *gin.Context, from []string, to string, reasonRequired bool, action string) {
 	id, ok := pathID(c, "id")
 	if !ok {
 		return
@@ -116,22 +117,23 @@ func (h *Handler) moderateMosque(c *gin.Context, from []string, to string, reaso
 		return
 	}
 	var mosque models.Mosque
-	if err := h.DB.First(&mosque, "id = ?", id).Error; err != nil {
-		if isNotFound(err) {
-			utils.NotFound(c, "мечеть не найдена")
-			return
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&mosque, "id = ?", id).Error; err != nil {
+			return err
 		}
-		utils.InternalError(c, err)
-		return
-	}
-	if !slices.Contains(from, mosque.Status) {
-		utils.Conflict(c, "действие недоступно для мечети в статусе "+mosque.Status)
-		return
-	}
-	mosque.Status = to
-	mosque.ModerationNote = reason
-	if err := h.DB.Save(&mosque).Error; err != nil {
-		utils.InternalError(c, err)
+		if !slices.Contains(from, mosque.Status) {
+			return errConflict("действие недоступно для мечети в статусе " + mosque.Status)
+		}
+		entry := mosqueLog(&mosque)
+		entry.Action, entry.FromStatus, entry.ToStatus, entry.Reason = action, mosque.Status, to, reason
+		mosque.Status = to
+		mosque.ModerationNote = reason
+		if err := tx.Save(&mosque).Error; err != nil {
+			return err
+		}
+		return logAdmin(tx, c, entry)
+	})
+	if !h.handleTxError(c, err, "мечеть не найдена") {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"mosque": mosque})
@@ -139,23 +141,23 @@ func (h *Handler) moderateMosque(c *gin.Context, from []string, to string, reaso
 
 // POST /admin/mosques/:id/approve
 func (h *Handler) AdminApproveMosque(c *gin.Context) {
-	h.moderateMosque(c, []string{models.MosqueStatusPending}, models.MosqueStatusApproved, false)
+	h.moderateMosque(c, []string{models.MosqueStatusPending}, models.MosqueStatusApproved, false, ActMosqueApprove)
 }
 
 // POST /admin/mosques/:id/reject {reason}
 func (h *Handler) AdminRejectMosque(c *gin.Context) {
-	h.moderateMosque(c, []string{models.MosqueStatusPending}, models.MosqueStatusRejected, true)
+	h.moderateMosque(c, []string{models.MosqueStatusPending}, models.MosqueStatusRejected, true, ActMosqueReject)
 }
 
 // POST /admin/mosques/:id/block {reason} — только суперадмин.
 // Пожертвования в кампании заблокированной мечети сразу перестают приниматься.
 func (h *Handler) AdminBlockMosque(c *gin.Context) {
-	h.moderateMosque(c, []string{models.MosqueStatusApproved, models.MosqueStatusPending}, models.MosqueStatusBlocked, true)
+	h.moderateMosque(c, []string{models.MosqueStatusApproved, models.MosqueStatusPending}, models.MosqueStatusBlocked, true, ActMosqueBlock)
 }
 
 // POST /admin/mosques/:id/unblock — только суперадмин.
 func (h *Handler) AdminUnblockMosque(c *gin.Context) {
-	h.moderateMosque(c, []string{models.MosqueStatusBlocked}, models.MosqueStatusApproved, false)
+	h.moderateMosque(c, []string{models.MosqueStatusBlocked}, models.MosqueStatusApproved, false, ActMosqueUnblock)
 }
 
 // ---------- Кампании ----------
@@ -198,11 +200,14 @@ func (h *Handler) moderateCampaign(c *gin.Context, approve bool) {
 		if campaign.Status != models.CampaignStatusPendingApproval {
 			return errConflict("кампания не ожидает одобрения")
 		}
+		var mosque models.Mosque
+		if err := tx.First(&mosque, "id = ?", campaign.MosqueID).Error; err != nil {
+			return err
+		}
+		entry := campaignLog(campaign, &mosque)
+		entry.FromStatus, entry.Reason = campaign.Status, reason
+		entry.Details = "цель " + som(campaign.GoalAmount)
 		if approve {
-			var mosque models.Mosque
-			if err := tx.First(&mosque, "id = ?", campaign.MosqueID).Error; err != nil {
-				return err
-			}
 			if mosque.Status != models.MosqueStatusApproved {
 				return errConflict("мечеть не одобрена или заблокирована")
 			}
@@ -217,12 +222,18 @@ func (h *Handler) moderateCampaign(c *gin.Context, approve bool) {
 			now := h.Now()
 			campaign.Status = models.CampaignStatusActive
 			campaign.ApprovedAt = &now
+			entry.Action = ActCampaignApprove
 		} else {
 			campaign.Status = models.CampaignStatusRejected
+			entry.Action = ActCampaignReject
 		}
 		campaign.ModerationNote = reason
+		entry.ToStatus = campaign.Status
 		result = *campaign
-		return tx.Save(campaign).Error
+		if err := tx.Save(campaign).Error; err != nil {
+			return err
+		}
+		return logAdmin(tx, c, entry)
 	})
 	if !h.handleTxError(c, err, "кампания не найдена") {
 		return
@@ -268,25 +279,36 @@ func (h *Handler) moderateReport(c *gin.Context, approve bool) {
 		return
 	}
 	var report models.Report
-	if err := h.DB.First(&report, "id = ?", id).Error; err != nil {
-		if isNotFound(err) {
-			utils.NotFound(c, "отчёт не найден")
-			return
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&report, "id = ?", id).Error; err != nil {
+			return err
 		}
-		utils.InternalError(c, err)
-		return
-	}
-	if report.Status != models.ReportStatusSubmitted {
-		utils.Conflict(c, "отчёт не ожидает проверки")
-		return
-	}
-	report.Status = models.ReportStatusApproved
-	if !approve {
-		report.Status = models.ReportStatusRejected
-	}
-	report.ModerationNote = reason
-	if err := h.DB.Save(&report).Error; err != nil {
-		utils.InternalError(c, err)
+		if report.Status != models.ReportStatusSubmitted {
+			return errConflict("отчёт не ожидает проверки")
+		}
+		var campaign models.Campaign
+		if err := tx.First(&campaign, "id = ?", report.CampaignID).Error; err != nil {
+			return err
+		}
+		var mosque models.Mosque
+		if err := tx.First(&mosque, "id = ?", report.MosqueID).Error; err != nil {
+			return err
+		}
+		entry := reportLog(&report, &campaign, &mosque)
+		entry.FromStatus, entry.Reason = report.Status, reason
+		entry.Details = "собрано " + som(report.TotalCollected) + ", потрачено " + som(report.TotalSpent)
+		report.Status, entry.Action = models.ReportStatusApproved, ActReportApprove
+		if !approve {
+			report.Status, entry.Action = models.ReportStatusRejected, ActReportReject
+		}
+		entry.ToStatus = report.Status
+		report.ModerationNote = reason
+		if err := tx.Save(&report).Error; err != nil {
+			return err
+		}
+		return logAdmin(tx, c, entry)
+	})
+	if !h.handleTxError(c, err, "отчёт не найден") {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"report": report})
@@ -313,6 +335,8 @@ func (h *Handler) handleTxError(c *gin.Context, err error, notFoundMsg string) b
 	}
 	var ce conflictError
 	switch {
+	case errors.Is(err, errHandled):
+		// ответ уже отправлен
 	case isNotFound(err):
 		utils.NotFound(c, notFoundMsg)
 	case errors.As(err, &ce):

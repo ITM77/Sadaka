@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"sadaka.tj/backend/middleware"
 	"sadaka.tj/backend/models"
 	"sadaka.tj/backend/utils"
@@ -147,7 +148,18 @@ func (h *Handler) CreateMosque(c *gin.Context) {
 		utils.BadRequest(c, err.Error())
 		return
 	}
-	if err := h.DB.Create(&mosque).Error; err != nil {
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&mosque).Error; err != nil {
+			return err
+		}
+		entry := mosqueLog(&mosque)
+		entry.Action, entry.ToStatus = ActMosqueSubmit, mosque.Status
+		if mosque.ImamName != "" {
+			entry.Details = "имам " + mosque.ImamName
+		}
+		return logMosque(tx, c, entry)
+	})
+	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}
@@ -173,11 +185,24 @@ func (h *Handler) UpdateMosque(c *gin.Context) {
 		utils.BadRequest(c, err.Error())
 		return
 	}
-	if mosque.Status == models.MosqueStatusRejected {
+	resubmit := mosque.Status == models.MosqueStatusRejected
+	if resubmit {
 		mosque.Status = models.MosqueStatusPending
 		mosque.ModerationNote = ""
 	}
-	if err := h.DB.Save(mosque).Error; err != nil {
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(mosque).Error; err != nil {
+			return err
+		}
+		if !resubmit {
+			return nil
+		}
+		entry := mosqueLog(mosque)
+		entry.Action = ActMosqueResubmit
+		entry.FromStatus, entry.ToStatus = models.MosqueStatusRejected, models.MosqueStatusPending
+		return logMosque(tx, c, entry)
+	})
+	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}

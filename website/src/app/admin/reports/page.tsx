@@ -42,7 +42,8 @@ export default function AdminReports() {
 }
 
 function List() {
-  const status = useSearchParams().get('status') ?? 'submitted';
+  const params = useSearchParams();
+  const status = params.get('status') ?? 'submitted';
   const { admin } = useAdmin();
   const { stats, refresh } = useAdminStats();
   const { items, total, error, reload, call } = useAdminList<Report>(
@@ -50,7 +51,7 @@ function List() {
     'reports',
   );
   const [notice, setNotice] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params.get('q') ?? ''); // ?q= — переход из журнала
 
   const shown = useMemo(
     () =>

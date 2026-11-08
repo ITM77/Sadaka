@@ -166,6 +166,31 @@
 
 Причина сохраняется в `moderation_note` и видна мечети. Блокировка мечети сразу останавливает приём пожертвований во все её кампании.
 
+Каждый запрос с токеном админа сверяется с БД: если доступ отключён, пароль сброшен или токен выдан до этого — `401`. Роль берётся из БД, а не из токена, поэтому смена роли действует сразу.
+
+### Сотрудники и журнал действий
+
+| Метод | Путь | Роль | Тело |
+|---|---|---|---|
+| `GET` | `/admin/me` | любая | — |
+| `GET` | `/admin/mosques/:id/history` | любая | — |
+| `GET` | `/admin/staff` | superadmin | — |
+| `POST` | `/admin/staff` | superadmin | `{ "full_name", "email", "role" }` |
+| `GET` | `/admin/staff/:id` | superadmin | — |
+| `POST` | `/admin/staff/:id/link` | superadmin | — |
+| `PUT` | `/admin/staff/:id/role` | superadmin | `{ "role": "moderator" }` |
+| `POST` | `/admin/staff/:id/disable` | superadmin | `{ "reason": "..." }` обязательно |
+| `POST` | `/admin/staff/:id/enable` | superadmin | — |
+| `GET` | `/admin/audit?admin_id=&action=&object_type=&from=&to=&q=` | superadmin | — |
+| `GET` | `/admin/audit/:id` | superadmin | — |
+| `GET` | `/admin/audit/export?…` | superadmin | — (CSV, UTF-8 с BOM, разделитель `;`) |
+| `GET` | `/admin/invite/:token` | без входа | — |
+| `POST` | `/admin/invite/:token` | без входа | `{ "password": "..." }` → `{ token, admin }` |
+
+- Приглашение и `/link` возвращают `invite_token` (действует 72 часа, одноразовый). Писем платформа не отправляет: ссылку `/admin/invite/<token>` суперадмин передаёт сотруднику сам. `/link` у работающего сотрудника — сброс пароля: старый пароль и все сессии сразу перестают действовать.
+- Свою учётную запись суперадмин менять не может (`409`) — так в системе всегда остаётся хотя бы один суперадмин.
+- Журнал (`audit_logs`) пишется в той же транзакции, что и решение: одобрение/отказ мечети, сбора, отчёта, блокировка, снятие блокировки и все действия с сотрудниками. Хранятся автор, роль, статус до и после, причина, IP и User-Agent. События мечети (подача заявки, сбора, отчёта, завершение сбора) попадают только в историю мечети, а не в журнал сотрудников.
+
 `GET /admin/dashboard` →
 ```json
 { "mosques_approved": 1, "mosques_pending": 0, "mosques_blocked": 0,

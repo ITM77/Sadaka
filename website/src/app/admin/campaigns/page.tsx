@@ -46,7 +46,8 @@ export default function AdminCampaigns() {
 }
 
 function List() {
-  const status = useSearchParams().get('status') ?? 'pending_approval';
+  const params = useSearchParams();
+  const status = params.get('status') ?? 'pending_approval';
   const { admin } = useAdmin();
   const { stats, refresh } = useAdminStats();
   const { items, total, error, reload, call } = useAdminList<Campaign>(
@@ -54,7 +55,7 @@ function List() {
     'campaigns',
   );
   const [notice, setNotice] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params.get('q') ?? ''); // ?q= — переход из журнала
 
   const shown = useMemo(
     () => items?.filter((c) => matches(query, c.title, c.mosque?.name, c.mosque?.city)) ?? null,
