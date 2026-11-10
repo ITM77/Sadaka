@@ -6,8 +6,41 @@ import { AdminRole, PERMISSIONS, ROLE_LABELS } from '@/lib/adminAuth';
 import { useI18n } from '@/lib/i18n/client';
 
 /** 12p: раздел только для суперадмина — что видит модератор или аналитик по прямой ссылке. */
-export default function NoAccess({ role, section }: { role: AdminRole; section: string }) {
+export default function NoAccess({
+  role,
+  section,
+  forModerators = false,
+}: {
+  role: AdminRole;
+  section: string;
+  /** Раздел открыт и модератору (не только суперадмину) — другой заголовок и текст. */
+  forModerators?: boolean;
+}) {
   const { t } = useI18n();
+  if (forModerators) {
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <section className="panel-lg flex flex-col items-start gap-4">
+          <span className="icon-tile">
+            <IconLock size={22} />
+          </span>
+          <div>
+            <h1 className="title">{t('Раздел доступен суперадмину и модератору')}</h1>
+            <p className="body-text mt-1.5 max-w-[560px]">
+              {t('{section} содержит личные данные, поэтому открыт только суперадмину и модератору. Ваша роль — {role}. Нужен доступ — обратитесь к суперадмину Комитета.', {
+                section: t(section),
+                role: t(ROLE_LABELS[role]).toLowerCase(),
+              })}
+            </p>
+          </div>
+          <Link href="/admin" className="btn btn-secondary">
+            {t('Вернуться к сводке')}
+          </Link>
+        </section>
+        <Rights role={role} />
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
       <section className="panel-lg flex flex-col items-start gap-4">
@@ -27,6 +60,14 @@ export default function NoAccess({ role, section }: { role: AdminRole; section: 
           {t('Вернуться к сводке')}
         </Link>
       </section>
+      <Rights role={role} />
+    </div>
+  );
+}
+
+function Rights({ role }: { role: AdminRole }) {
+  const { t } = useI18n();
+  return (
       <aside className="panel flex flex-col gap-3" aria-labelledby="no-access-rights">
         <h2 id="no-access-rights" className="overtitle">
           {t('Ваши права')} · {t(ROLE_LABELS[role])}
@@ -48,6 +89,5 @@ export default function NoAccess({ role, section }: { role: AdminRole; section: 
           })}
         </ul>
       </aside>
-    </div>
   );
 }

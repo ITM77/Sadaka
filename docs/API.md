@@ -104,6 +104,28 @@
 
 Уведомления создаются в той же транзакции, что и событие.
 
+### Учёт нуждающихся (представитель мечети)
+
+Мечеть ведёт свой список семей и журнал выдачи помощи. Деньги приходят в сбор мечети категории `welfare` («Помощь нуждающимся»), мечеть распределяет их сама. Личные данные видят только мечеть и Комитет (суперадмин, модератор); публично — только обезличенные итоги.
+
+| Метод | Путь | Что делает |
+|---|---|---|
+| `GET` | `/me/mosques/:id/needy?status=active\|closed\|all&q=` | `{ beneficiaries, summary: { active, closed, people, month_amount, month_count, waiting }, funds }` |
+| `POST` | `/me/mosques/:id/needy` | новая семья → `201 { beneficiary }` |
+| `GET` | `/me/needy/:id` | `{ beneficiary, aid: [...], funds }` |
+| `PUT` | `/me/needy/:id` | правка; `status: "closed"` + `closed_reason` — снять с учёта |
+| `POST` | `/me/needy/:id/aid` | выдача помощи → `201 { aid }` |
+| `DELETE` | `/me/aid/:id` | удалить ошибочную выдачу → `204` |
+| `GET` | `/me/campaigns/:id/aid` | итоги выдач из сбора по видам — подставить в отчёт |
+
+Семья: `{ "full_name": "...", "phone": "93 777 11 22", "address": "...", "household_size": 5, "situation": ["widow","large_family"], "needs": ["food","utilities"], "note": "..." }`. Телефон необязателен, приводится к `+992XXXXXXXXX`. `situation`: `widow`, `orphan`, `disability`, `illness`, `large_family`, `elderly`, `low_income`, `other`. `needs` и вид выдачи: `food`, `medicine`, `utilities`, `clothes`, `education`, `housing`, `money`, `other`.
+
+В ответе к семье добавлены `aid_total`, `aid_count`, `last_aid_on` и `other_mosques` — в скольких ещё мечетях активна семья с тем же телефоном (возможная двойная помощь). `summary.waiting` — активные семьи без помощи 60+ дней. `funds` — сборы `welfare` мечети: `collected`, `given`, `available`, `reported`.
+
+Выдача: `{ "kind": "food", "description": "Мука, масло", "amount": 200, "given_on": "2026-11-10", "campaign_id": "uuid" }`. Без `campaign_id` — из средств мечети. С `campaign_id` — `409`, если сбор не `welfare` своей мечети, не `active`/`completed`, по нему уже подан отчёт или сумма больше остатка (`собрано − выдано`); сбор блокируется на время записи, поэтому две выдачи одновременно не превысят остаток. Выдавать снятой с учёта семье нельзя (`409`). Удалить выдачу нельзя, если она из сбора с поданным отчётом.
+
+`GET /campaigns/:id` (публично) для сборов `welfare` добавляет `aid: { families, amount, count, by_kind: [{ kind, amount, families, count }] }` — без имён.
+
 ### `POST /donations`
 ```json
 { "campaign_id": "uuid", "amount": 500, "payment_method": "card" }
@@ -216,13 +238,17 @@
 
 `GET /admin/mosques` принимает ещё `city`, `q` (название, адрес, город, имам, телефон), `order=asc`; каждая мечеть приходит со счётчиками `active_campaigns`, `unreported_campaigns`, `active_collected`, а в ответе есть `cities` — список городов для фильтра реестра. `GET /admin/campaigns` добавляет к сбору `mosque_unreported` — сколько у мечети завершённых сборов без отчёта. `GET /admin/mosques/:id/campaigns` (любая роль) → `{ mosque, campaigns, reports }` — «Контекст мечети» в очереди сборов.
 
-### Аналитика и режим Савоб
+### Аналитика, режим Савоб и нуждающиеся
 
 | Метод | Путь | Роль | Тело |
 |---|---|---|---|
 | `GET` | `/admin/analytics?period=30d\|90d\|12m\|all` | любая | — |
 | `GET` | `/admin/savob-mode` | любая | — |
 | `PUT` | `/admin/savob-mode` | superadmin | `{ "event": "ramadan", "multiplier": 2, "starts_on": "2027-03-01", "ends_on": "2027-03-30", "notify": true }` |
+| `GET` | `/admin/needy?status=&q=&mosque_id=&city=&duplicates=1` | moderator+ | — |
+| `GET` | `/admin/needy/:id` | moderator+ | — |
+
+`/admin/needy` — общий список нуждающихся всех мечетей → `{ beneficiaries (с mosque_name, mosque_city и итогами помощи), total, summary: { active, people, mosques, aid_total, duplicates }, cities }`; `duplicates=1` — только семьи, чей телефон активен ещё в другой мечети. `/admin/needy/:id` → `{ beneficiary, aid, same_phone }`. Аналитику список недоступен: в нём личные данные.
 
 `/admin/analytics` (только завершённые платежи, даты по Душанбе) → `{ period, unit, totals: { amount, count, donors, avg, savob }, previous: { amount, count }, has_previous, series: [{ bucket: "2026-11-01", amount, count }], cities: [{ city, amount, count, mosques }], methods: [{ method, amount, count }], top_mosques: [{ id, name, city, amount, count, donors }], reporting: { completed, approved, review, rejected, missing }, campaigns_by_status, mosques_by_status }`. Шаг графика: 30 дней — по дням, 90 дней — по неделям, 12 месяцев и всё время — по месяцам; пустые шаги приходят с нулём. Отчётность считается за всё время.
 

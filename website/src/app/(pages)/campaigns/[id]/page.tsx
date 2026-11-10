@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import DonateForm from '@/components/DonateForm';
 import ProgressBar from '@/components/ProgressBar';
-import { IconCheck, IconChevronRight, IconMosque, IconReport, IconShield } from '@/components/icons';
+import { IconCheck, IconChevronRight, IconHandHeart, IconMosque, IconReport, IconShield } from '@/components/icons';
 import { apiFetchOrNull, Campaign, CATEGORY_LABELS, progress, Report } from '@/lib/api';
 import type { Fmt, I18n } from '@/lib/i18n/core';
 import { getI18n } from '@/lib/i18n/server';
+import { AID_KIND_LABELS, AidSummary } from '@/lib/needy';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,8 @@ type Data = {
   campaign: Campaign;
   recent_donations: { amount: number; created_at: string }[];
   report: Report | null;
+  /** Только для сборов «Помощь нуждающимся»: обезличенные итоги выдач. */
+  aid?: AidSummary;
 };
 
 const load = (id: string) => apiFetchOrNull<Data>(`/campaigns/${encodeURIComponent(id)}`);
@@ -40,7 +43,7 @@ export default async function CampaignPage({ params }: { params: { id: string } 
   const { t, fmt, lang } = getI18n();
   const data = await load(params.id);
   if (!data) notFound();
-  const { campaign, recent_donations, report } = data;
+  const { campaign, recent_donations, report, aid } = data;
   const pct = progress(campaign);
   const now = Date.now();
   const open =
@@ -163,6 +166,9 @@ export default async function CampaignPage({ params }: { params: { id: string } 
             </section>
           )}
 
+          {/* Помощь нуждающимся: только итоги, без имён */}
+          {campaign.category === 'welfare' && aid && <AidSection aid={aid} t={t} fmt={fmt} />}
+
           {/* Последние пожертвования */}
           {recent_donations.length > 0 && (
             <section aria-labelledby="recent-donations" className="order-6 panel">
@@ -215,6 +221,48 @@ function Stat({ value, label }: { value: string; label: string }) {
       <dt className="caption leading-tight break-words">{label}</dt>
       <dd className="text-lg leading-6 font-semibold tabular">{value}</dd>
     </div>
+  );
+}
+
+/** «Помощь уже выдана»: сколько семей и сколько денег, по видам помощи. Имена не публикуются. */
+function AidSection({ aid, t, fmt }: { aid: AidSummary; t: I18n['t']; fmt: Fmt }) {
+  const families = (n: number) => `${fmt.number(n)} ${fmt.plural(n, ['семье', 'семьям', 'семьям'])}`;
+  return (
+    <section aria-labelledby="aid-title" className="order-5 panel flex flex-col gap-3.5">
+      <div className="flex gap-3 items-start">
+        <span className="icon-tile" aria-hidden="true">
+          <IconHandHeart />
+        </span>
+        <div className="min-w-0">
+          <h2 id="aid-title" className="title-sm">
+            {aid.count > 0 ? t('Помощь уже выдана') : t('Помощь семьям')}
+          </h2>
+          <p className="body-text mt-1">
+            {aid.count > 0
+              ? `${families(aid.families)} · ${fmt.money(aid.amount)}`
+              : t('Мечеть ещё не выдавала помощь из этого сбора.')}
+          </p>
+        </div>
+      </div>
+
+      {aid.count > 0 && aid.by_kind.length > 0 && (
+        <ul className="bg-app rounded-tile px-3.5">
+          {aid.by_kind.map((k) => (
+            <li key={k.kind} className="flex items-center justify-between gap-3 min-h-11 py-2 border-b border-white last:border-b-0 text-sm">
+              <span className="min-w-0 text-ink break-words">{t(AID_KIND_LABELS[k.kind] ?? k.kind)}</span>
+              <span className="text-right shrink-0">
+                <span className="block font-medium tabular whitespace-nowrap">{fmt.money(k.amount)}</span>
+                <span className="block caption tabular whitespace-nowrap">
+                  {fmt.number(k.families)} {fmt.plural(k.families, ['семья', 'семьи', 'семей'])}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="caption">{t('Мечеть ведёт учёт нуждающихся; имена не публикуются.')}</p>
+    </section>
   );
 }
 

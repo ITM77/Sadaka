@@ -4,6 +4,8 @@ import { tgCabinet } from './tg/cabinet';
 import { tgAdmin } from './tg/admin';
 import { tgMap } from './tg/map';
 import { tgNotify } from './tg/notify';
+import { tgNeedy } from './tg/needy';
+import { tgNeedyAdmin } from './tg/needyAdmin';
 
 /**
  * Перевод интерфейса: русский — исходный язык (ключи словаря — сами русские строки),
@@ -27,7 +29,7 @@ export const LANG_LABELS: Record<Lang, { short: string; name: string }> = {
 
 export const isLang = (v: unknown): v is Lang => v === 'ru' || v === 'tg';
 
-const TG: Record<string, string> = { ...tgCommon, ...tgPublic, ...tgCabinet, ...tgAdmin, ...tgMap, ...tgNotify };
+const TG: Record<string, string> = { ...tgCommon, ...tgPublic, ...tgCabinet, ...tgAdmin, ...tgMap, ...tgNotify, ...tgNeedy, ...tgNeedyAdmin };
 
 export type Vars = Record<string, string | number>;
 

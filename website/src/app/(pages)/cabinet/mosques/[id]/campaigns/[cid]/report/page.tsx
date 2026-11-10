@@ -9,6 +9,7 @@ import { ApiError, apiFetch, Campaign, Report } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isEnded } from '@/lib/cabinet';
 import { useI18n } from '@/lib/i18n/client';
+import { AID_KIND_LABELS, AidSummary } from '@/lib/needy';
 
 export default function ReportPage({ params }: { params: { id: string; cid: string } }) {
   const { data, error, notFound: missing } = useMosqueCabinet(params.id);
@@ -71,6 +72,47 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
   const rest = campaign.current_amount - spent;
   const updateRow = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
+  // Сбор «Помощь нуждающимся»: статьи расходов из записанных выдач семьям, по строке на вид помощи
+  const welfare = campaign.category === 'welfare';
+  const [aidBusy, setAidBusy] = useState(false);
+  const [aidMsg, setAidMsg] = useState<{ tone: 'info' | 'success' | 'error'; text: string } | null>(null);
+  const prefillAid = async () => {
+    setAidBusy(true);
+    setAidMsg(null);
+    try {
+      const { aid } = await apiFetch<{ aid: AidSummary }>(`/me/campaigns/${campaign.id}/aid`, { token });
+      if (aid.by_kind.length === 0) {
+        setAidMsg({ tone: 'info', text: t('Из этого сбора ещё не записано ни одной выдачи помощи.') });
+        return;
+      }
+      const aidRows: Row[] = aid.by_kind.map((k) => ({
+        item: `${t(AID_KIND_LABELS[k.kind] ?? k.kind)} — ${k.families} ${fmt.plural(k.families, ['семья', 'семьи', 'семей'])}`,
+        cost: String(k.amount),
+      }));
+      const typed = rows.filter((r) => r.item.trim() || r.cost.trim());
+      // Уже введённые статьи не трогаем: выдачи добавляются в конец, и только с согласия
+      if (
+        typed.length > 0 &&
+        !confirm(t('Добавить выдачи помощи в конец списка расходов? Уже введённые статьи останутся.'))
+      )
+        return;
+      setRows([...typed, ...aidRows]);
+      setAidMsg({
+        tone: 'success',
+        text: t('Подставлено выдач: {n} на {sum} — {families} {word}. Проверьте суммы.', {
+          n: aid.count,
+          sum: fmt.money(aid.amount),
+          families: aid.families,
+          word: fmt.plural(aid.families, ['семья', 'семьи', 'семей']),
+        }),
+      });
+    } catch (err) {
+      setAidMsg({ tone: 'error', text: t(err instanceof ApiError ? err.message : 'Не удалось загрузить выдачи помощи') });
+    } finally {
+      setAidBusy(false);
+    }
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -130,6 +172,22 @@ function ReportForm({ campaign, previous, back }: { campaign: Campaign; previous
           </FormCard>
 
           <FormCard as="fieldset" title={t('Расходы')}>
+            {welfare && (
+              <div className="tile flex flex-col sm:flex-row sm:items-center gap-3">
+                <p className="flex-1 min-w-0 text-[13px] leading-[18px] text-ink">
+                  {t('Выдачи семьям из этого сбора можно подставить в расходы — по строке на каждый вид помощи. Имён в отчёте не будет.')}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-white btn-sm !min-h-11 shrink-0"
+                  disabled={aidBusy}
+                  onClick={prefillAid}
+                >
+                  {aidBusy ? t('Загружаем…') : t('Подставить выдачи помощи')}
+                </button>
+              </div>
+            )}
+            {aidMsg && <Alert tone={aidMsg.tone}>{aidMsg.text}</Alert>}
             <div className="flex flex-col gap-2.5">
               <div
                 aria-hidden="true"

@@ -65,6 +65,14 @@ func (h *Handler) Router() *gin.Engine {
 	user.POST("/campaigns/:id/complete", h.CompleteCampaign)
 	user.POST("/campaigns/:id/report", h.SubmitReport)
 	user.POST("/donations", h.CreateDonation)
+	// Учёт нуждающихся мечети
+	user.GET("/me/mosques/:id/needy", h.MyNeedy)
+	user.POST("/me/mosques/:id/needy", h.CreateNeedy)
+	user.GET("/me/needy/:id", h.GetMyNeedy)
+	user.PUT("/me/needy/:id", h.UpdateMyNeedy)
+	user.POST("/me/needy/:id/aid", h.AddAid)
+	user.DELETE("/me/aid/:id", h.DeleteAid)
+	user.GET("/me/campaigns/:id/aid", h.MyCampaignAid)
 
 	// Комитет улемов
 	api.POST("/admin/auth/login", loginLimit, h.AdminLogin)
@@ -87,6 +95,9 @@ func (h *Handler) Router() *gin.Engine {
 	admin.GET("/campaigns", anyAdmin, h.AdminListCampaigns)
 	admin.GET("/reports", anyAdmin, h.AdminListReports)
 	admin.GET("/analytics", anyAdmin, h.AdminAnalytics)
+	// Общий список нуждающихся — личные данные, поэтому без аналитика.
+	admin.GET("/needy", moderator, h.AdminListNeedy)
+	admin.GET("/needy/:id", moderator, h.AdminGetNeedy)
 	admin.GET("/savob-mode", anyAdmin, h.GetSavobMode)
 	admin.PUT("/savob-mode", superadmin, h.AdminSetSavobMode)
 

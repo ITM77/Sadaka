@@ -108,6 +108,7 @@ export const PERMISSIONS: { label: string; roles: AdminRole[] }[] = [
   { label: 'Одобрять и отклонять заявки мечетей', roles: ['superadmin', 'moderator'] },
   { label: 'Одобрять и отклонять сборы', roles: ['superadmin', 'moderator'] },
   { label: 'Принимать и отклонять отчёты', roles: ['superadmin', 'moderator'] },
+  { label: 'Смотреть общий список нуждающихся', roles: ['superadmin', 'moderator'] },
   { label: 'Блокировать мечети и снимать блокировку', roles: ['superadmin'] },
   { label: 'Управлять сотрудниками и смотреть журнал', roles: ['superadmin'] },
   { label: 'Включать праздничный режим Савоб', roles: ['superadmin'] },

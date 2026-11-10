@@ -15,7 +15,7 @@ import {
   StatusBadge,
 } from '@/components/cabinet/ui';
 import { useMosqueCabinet } from '@/components/cabinet/useMosqueCabinet';
-import { IconArrowRight, IconEdit, IconInfo, IconPin, IconPlus, IconReport } from '@/components/icons';
+import { IconArrowRight, IconEdit, IconInfo, IconPin, IconPlus, IconReport, IconUsers } from '@/components/icons';
 import { ApiError, apiFetch, Campaign, CATEGORY_LABELS, progress, Report } from '@/lib/api';
 import { isEnded, needsReport } from '@/lib/cabinet';
 import { useI18n } from '@/lib/i18n/client';
@@ -127,6 +127,10 @@ export default function CabinetMosquePage({ params }: { params: { id: string } }
                   {t('Новый сбор')}
                 </Link>
               )}
+              <Link href={`${base}/needy`} className="btn btn-secondary btn-block">
+                <IconUsers size={18} />
+                {t('Нуждающиеся')}
+              </Link>
               {mosque.status !== 'blocked' && (
                 <Link href={`${base}/edit`} className="btn btn-secondary btn-block">
                   <IconEdit size={18} />

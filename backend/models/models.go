@@ -257,6 +257,54 @@ func (m *SavobMode) Active(now time.Time) bool {
 	return true
 }
 
+// ---------- Нуждающиеся ----------
+
+// Положение семьи (метки карточки).
+var NeedySituations = map[string]bool{
+	"widow": true, "orphan": true, "disability": true, "illness": true,
+	"large_family": true, "elderly": true, "low_income": true, "other": true,
+}
+
+// Виды помощи — и что нужно семье, и что выдали.
+var AidKinds = map[string]bool{
+	"food": true, "medicine": true, "utilities": true, "clothes": true,
+	"education": true, "housing": true, "money": true, "other": true,
+}
+
+const (
+	NeedyStatusActive = "active" // нуждается, получает помощь
+	NeedyStatusClosed = "closed" // помощь больше не нужна
+)
+
+// Beneficiary — семья или человек на учёте у мечети. Личные данные видят
+// только сама мечеть и Комитет (суперадмин, модератор); публично — только итоги.
+type Beneficiary struct {
+	Base
+	MosqueID      uuid.UUID `gorm:"type:uuid;not null;index" json:"mosque_id"`
+	FullName      string    `gorm:"size:255;not null" json:"full_name"`
+	Phone         string    `gorm:"size:20;index" json:"phone"` // +992…, может быть пустым
+	Address       string    `gorm:"size:500" json:"address"`
+	HouseholdSize int       `gorm:"not null;default:1" json:"household_size"`
+	Situation     []string  `gorm:"serializer:json;type:text" json:"situation"`
+	Needs         []string  `gorm:"serializer:json;type:text" json:"needs"`
+	Note          string    `gorm:"type:text" json:"note"`
+	Status        string    `gorm:"size:10;not null;default:active;index" json:"status"`
+	ClosedReason  string    `gorm:"size:500" json:"closed_reason,omitempty"`
+}
+
+// AidRecord — одна выдача помощи. Если помощь из сбора — CampaignID указывает
+// на сбор «Помощь нуждающимся»; сумма выдач не больше собранного.
+type AidRecord struct {
+	Base
+	MosqueID      uuid.UUID       `gorm:"type:uuid;not null;index" json:"mosque_id"`
+	BeneficiaryID uuid.UUID       `gorm:"type:uuid;not null;index" json:"beneficiary_id"`
+	CampaignID    *uuid.UUID      `gorm:"type:uuid;index" json:"campaign_id,omitempty"`
+	Kind          string          `gorm:"size:20;not null" json:"kind"`
+	Description   string          `gorm:"size:500" json:"description"`
+	Amount        decimal.Decimal `gorm:"type:numeric(15,2);not null" json:"amount"`
+	GivenOn       time.Time       `gorm:"type:date;not null" json:"given_on"`
+}
+
 // ---------- Уведомления ----------
 
 // Виды уведомлений. Текст собирает сайт по виду — так он переводится на таджикский.
@@ -355,6 +403,6 @@ func All() []any {
 	return []any{
 		&User{}, &Admin{}, &Mosque{}, &Campaign{}, &Transaction{},
 		&Report{}, &SavobBalance{}, &SavobEntry{}, &AuditLog{},
-		&SavobMode{}, &Notification{},
+		&SavobMode{}, &Notification{}, &Beneficiary{}, &AidRecord{},
 	}
 }

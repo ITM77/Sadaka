@@ -152,7 +152,17 @@ func (h *Handler) GetCampaign(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"campaign": campaign, "recent_donations": recent, "report": report})
+	resp := gin.H{"campaign": campaign, "recent_donations": recent, "report": report}
+	// Сбор «Помощь нуждающимся»: сколько семей уже получили помощь — без имён.
+	if campaign.Category == welfareCategory {
+		aid, err := h.campaignAid(campaign.ID)
+		if err != nil {
+			utils.InternalError(c, err)
+			return
+		}
+		resp["aid"] = aid
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // POST /campaigns — мечеть создаёт черновик.

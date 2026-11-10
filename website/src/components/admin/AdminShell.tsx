@@ -9,6 +9,7 @@ import {
   IconClock,
   IconMoon,
   IconHandHeart,
+  IconHeart,
   IconHome,
   IconLandmark,
   IconLogout,
@@ -19,7 +20,7 @@ import {
 } from '@/components/icons';
 import { initials } from '@/lib/api';
 import { LangSwitch, useI18n } from '@/lib/i18n/client';
-import { AdminAuthProvider, canManageStaff, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
+import { AdminAuthProvider, canManageStaff, canModerate, ROLE_LABELS, useAdmin } from '@/lib/adminAuth';
 import { AdminStats, AdminStatsProvider, useAdminStats } from './AdminStats';
 import Dialog from './Dialog';
 
@@ -37,6 +38,8 @@ type NavItem = {
   icon?: ComponentType<{ size?: number }>;
   count?: (s: AdminStats) => number;
   superOnly?: boolean;
+  /** Только модератор и суперадмин — аналитику не показываем. */
+  modOnly?: boolean;
   /** Активен ли пункт для текущего адреса. */
   match: (path: string, status: string | null) => boolean;
 };
@@ -109,6 +112,7 @@ const NAV: NavGroup[] = [
         icon: IconReport,
         match: (p, st) => p === '/admin/reports' && !isQueue(st, 'submitted'),
       },
+      { key: 'r-needy', href: '/admin/needy', label: 'Нуждающиеся', icon: IconHeart, modOnly: true, match: (p) => p === '/admin/needy' },
     ],
   },
   {
@@ -176,7 +180,7 @@ function useNav() {
   return NAV.map((g) => ({
     ...g,
     items: g.items
-      .filter((n) => !n.superOnly || canManageStaff(admin))
+      .filter((n) => (!n.superOnly || canManageStaff(admin)) && (!n.modOnly || canModerate(admin)))
       .map((n) => ({ ...n, active: n.match(pathname, status), pending: stats && n.count ? n.count(stats) : 0 })),
   })).filter((g) => g.items.length > 0);
 }
