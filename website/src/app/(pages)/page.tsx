@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
 import MosqueRow from '@/components/donor/MosqueRow';
+import SavobBanner from '@/components/donor/SavobBanner';
 import { categoryIcon } from '@/components/donor/categoryIcons';
 import { IconChevronDown, IconSavob, IconSearch, IconShield } from '@/components/icons';
 import { apiFetch, Campaign, CATEGORY_LABELS, Mosque } from '@/lib/api';
@@ -63,6 +64,7 @@ export default async function Home() {
       <div className="layout-aside">
         {/* ---------- Основная колонка ---------- */}
         <div className="flex flex-col gap-3 min-w-0">
+          <SavobBanner />
           {/* Поиск и категории */}
           <section
             aria-labelledby="home-title"

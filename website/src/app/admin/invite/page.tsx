@@ -62,11 +62,12 @@ export default function InvitePage() {
     setBusy(true);
     setError('');
     try {
-      const res = await apiFetch<{ token: string; admin: Admin }>('/admin/invite/accept', {
+      // Сервер ставит cookie сессии сам — в ответе только профиль.
+      const res = await apiFetch<{ admin: Admin }>('/admin/invite/accept', {
         method: 'POST',
         body: { token, password },
       });
-      startSession(res.token, res.admin);
+      startSession(res.admin);
       router.replace('/admin');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось сохранить пароль');

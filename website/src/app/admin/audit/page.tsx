@@ -89,7 +89,7 @@ function apiQuery(f: Filters) {
 }
 
 function Journal() {
-  const { call, token } = useAdmin();
+  const { call } = useAdmin();
   const { t, fmt } = useI18n();
   const { filters, entryId, write } = useFilters();
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -373,7 +373,7 @@ function Journal() {
         onClose={() => setExporting(false)}
         chips={chips.map((c) => c.label)}
         total={total}
-        onDownload={() => downloadAuditCsv(query, token)}
+        onDownload={() => downloadAuditCsv(query)}
       />
     </div>
   );

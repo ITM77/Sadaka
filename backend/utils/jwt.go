@@ -16,6 +16,9 @@ const (
 
 const tokenTTL = 7 * 24 * time.Hour
 
+// AdminTokenTTL — сессия сотрудника Комитета короче: рабочий день, потом вход заново.
+const AdminTokenTTL = 12 * time.Hour
+
 type Claims struct {
 	Kind      string `json:"kind"`                 // SubjectUser | SubjectAdmin
 	AdminRole string `json:"admin_role,omitempty"` // только для админов
@@ -26,13 +29,17 @@ func (c *Claims) AccountID() (uuid.UUID, error) { return uuid.Parse(c.Subject) }
 
 func IssueToken(secret string, id uuid.UUID, kind, adminRole string) (string, error) {
 	now := time.Now()
+	ttl := tokenTTL
+	if kind == SubjectAdmin {
+		ttl = AdminTokenTTL
+	}
 	claims := Claims{
 		Kind:      kind,
 		AdminRole: adminRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   id.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(tokenTTL)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			Issuer:    "sadaka",
 		},
 	}

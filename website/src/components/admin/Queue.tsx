@@ -7,13 +7,13 @@ import EmptyState from '@/components/EmptyState';
 import { IconSearch } from '@/components/icons';
 import { useI18n } from '@/lib/i18n/client';
 import Dialog from './Dialog';
-import { ListSkeleton, Tab } from './Moderation';
+import { HotkeysContext, ListSkeleton, Tab } from './Moderation';
 
 /**
  * Очередь проверки по макетам 12c / 12e / 12f.
  * Веб: слева таблица с фильтром статуса и сортировкой, справа панель решения 440–480 px
  * по выбранной строке (?id=…). Телефон и планшет: строки-карточки, решение — в шторке снизу.
- * J / K — следующая / предыдущая строка.
+ * J / K — следующая / предыдущая строка; A — одобрить (нажать дважды), R — отклонить.
  */
 
 export type Column<T> = {
@@ -244,6 +244,10 @@ export function QueueLayout<T extends { id: string }>(p: Props<T>) {
             </table>
             <p className="hidden xl:flex items-center gap-1.5 flex-wrap caption px-3 pt-3 pb-1">
               <kbd className={KBD}>J</kbd>/<kbd className={KBD}>K</kbd> — {tr('следующая / предыдущая строка')}
+              <span aria-hidden="true" className="mx-1">·</span>
+              <kbd className={KBD}>A</kbd> — {tr('одобрить (нажать дважды)')}
+              <span aria-hidden="true" className="mx-1">·</span>
+              <kbd className={KBD}>R</kbd> — {tr('отклонить')}
             </p>
 
             {/* Телефон и планшет: карточки */}
@@ -288,7 +292,12 @@ export function QueueLayout<T extends { id: string }>(p: Props<T>) {
               {parts.meta && <p className="caption break-words">{parts.meta}</p>}
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3.5 flex flex-col gap-3.5">{parts.body}</div>
-            {parts.footer && <div className="flex-none px-5 pt-4 pb-5 border-t border-line flex flex-col gap-3 bg-white">{parts.footer}</div>}
+            {parts.footer && (
+              <div className="flex-none px-5 pt-4 pb-5 border-t border-line flex flex-col gap-3 bg-white">
+                {/* A / R работают только здесь — в шторке на телефоне клавиатуры нет */}
+                <HotkeysContext.Provider value={desktop}>{parts.footer}</HotkeysContext.Provider>
+              </div>
+            )}
           </>
         ) : (
           <p className="body-text p-5">{tr('Выберите строку слева — здесь появятся данные и кнопки решения.')}</p>

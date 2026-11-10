@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import CampaignCard from '@/components/CampaignCard';
 import ProgressBar from '@/components/ProgressBar';
+import MosqueMap from '@/components/donor/MosqueMap';
 import { QrLink, ShareButton } from '@/components/donor/ShareLink';
 import { IconCheck, IconPhone, IconPin, IconQr, IconReport, IconShare, IconShield } from '@/components/icons';
 import { apiFetchOrNull, Campaign, Mosque, progress, Report } from '@/lib/api';
@@ -33,6 +34,8 @@ export default async function MosquePage({ params }: { params: { id: string } })
   const path = `/mosques/${mosque.id}`;
   const photos = mosque.photo_urls ?? [];
   const featured = active[0];
+  const point =
+    mosque.latitude != null && mosque.longitude != null ? { lat: mosque.latitude, lng: mosque.longitude } : null;
 
   return (
     <div className="page">
@@ -118,7 +121,28 @@ export default async function MosquePage({ params }: { params: { id: string } })
                 </div>
               )}
             </dl>
-            <div className="flex flex-wrap gap-2 mt-3.5">
+            {point && (
+              <div className="mt-3.5">
+                <MosqueMap
+                  mosques={[mosque]}
+                  activeIds={active.length > 0 ? [mosque.id] : []}
+                  staticView
+                  label={t('{name} на карте', { name: mosque.name })}
+                  className="h-[220px] rounded-tile overflow-hidden"
+                />
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${point.lat}&mlon=${point.lng}#map=17/${point.lat}/${point.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-action inline-flex items-center gap-1.5 min-h-11 mt-1"
+                >
+                  <IconPin size={16} />
+                  {t('Открыть в картах')}
+                  <span className="sr-only">{t('(откроется в новой вкладке)')}</span>
+                </a>
+              </div>
+            )}
+            <div className={`flex flex-wrap gap-2 ${point ? 'mt-2' : 'mt-3.5'}`}>
               {mosque.phone && (
                 <a href={`tel:${mosque.phone}`} className="btn btn-secondary flex-1 sm:flex-none">
                   <IconPhone size={18} />

@@ -5,7 +5,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ComponentType, ReactNode, Suspense, useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
 import {
+  IconChart,
   IconClock,
+  IconMoon,
   IconHandHeart,
   IconHome,
   IconLandmark,
@@ -46,7 +48,10 @@ const isQueue = (status: string | null, queue: string) => status === null || sta
 const NAV: NavGroup[] = [
   {
     title: 'Работа',
-    items: [{ key: 'home', href: '/admin', label: 'Сводка', icon: IconHome, match: (p) => p === '/admin' }],
+    items: [
+      { key: 'home', href: '/admin', label: 'Сводка', icon: IconHome, match: (p) => p === '/admin' },
+      { key: 'analytics', href: '/admin/analytics', label: 'Аналитика', icon: IconChart, match: (p) => p === '/admin/analytics' },
+    ],
   },
   {
     title: 'Очередь проверки',
@@ -111,6 +116,7 @@ const NAV: NavGroup[] = [
     items: [
       { key: 'staff', href: '/admin/staff', label: 'Сотрудники', icon: IconUsers, superOnly: true, match: (p) => p === '/admin/staff' },
       { key: 'audit', href: '/admin/audit', label: 'Журнал действий', short: 'Журнал', icon: IconClock, superOnly: true, match: (p) => p === '/admin/audit' },
+      { key: 'savob', href: '/admin/savob', label: 'Режим Савоб', icon: IconMoon, superOnly: true, match: (p) => p === '/admin/savob' },
     ],
   },
 ];

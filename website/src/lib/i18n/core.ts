@@ -2,6 +2,8 @@ import { tgCommon } from './tg/common';
 import { tgPublic } from './tg/public';
 import { tgCabinet } from './tg/cabinet';
 import { tgAdmin } from './tg/admin';
+import { tgMap } from './tg/map';
+import { tgNotify } from './tg/notify';
 
 /**
  * Перевод интерфейса: русский — исходный язык (ключи словаря — сами русские строки),
@@ -25,7 +27,7 @@ export const LANG_LABELS: Record<Lang, { short: string; name: string }> = {
 
 export const isLang = (v: unknown): v is Lang => v === 'ru' || v === 'tg';
 
-const TG: Record<string, string> = { ...tgCommon, ...tgPublic, ...tgCabinet, ...tgAdmin };
+const TG: Record<string, string> = { ...tgCommon, ...tgPublic, ...tgCabinet, ...tgAdmin, ...tgMap, ...tgNotify };
 
 export type Vars = Record<string, string | number>;
 
@@ -61,7 +63,10 @@ function parts(iso: string | Date) {
 
 // Таджикские месяцы с изофатом: «9 ноябри 2026».
 const TG_MONTHS = ['январи', 'феврали', 'марти', 'апрели', 'майи', 'июни', 'июли', 'августи', 'сентябри', 'октябри', 'ноябри', 'декабри'];
-const TG_DAYS = ['якшанбе', 'душанбе', 'сешанбе', 'чоршанбе', 'панҷшанбе', 'ҷумъа', 'шанбе'];
+// Русские названия месяцев в именительном падеже (Intl даёт «ноября» в дате, а нам нужна подпись графика).
+const RU_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const RU_MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const TG_DAYS =['якшанбе', 'душанбе', 'сешанбе', 'чоршанбе', 'панҷшанбе', 'ҷумъа', 'шанбе'];
 
 const ruLong = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
 const ruDayMonth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', timeZone: TZ });
@@ -122,6 +127,18 @@ export function makeFmt(lang: Lang) {
     return `${w.charAt(0).toUpperCase()}${w.slice(1)}, ${p.d} ${TG_MONTHS[p.m]} ${p.y}`;
   };
 
+  /** «ноябрь 2026» / «ноябри 2026» — для графиков по месяцам. */
+  const monthYear = (iso: string) => {
+    const p = parts(iso);
+    if (!tg) return `${RU_MONTHS[p.m]} ${p.y}`;
+    return `${TG_MONTHS[p.m]} ${p.y}`;
+  };
+  /** «нояб.» / «ноя» — подпись оси. */
+  const monthShort = (iso: string) => {
+    const p = parts(iso);
+    return tg ? TG_MONTHS[p.m].slice(0, 3) : RU_MONTHS_SHORT[p.m];
+  };
+
   /** «74 300 с.» */
   const money = (amount: number) => `${num.format(amount)} ${t('с.')}`;
   const number = (n: number) => num.format(n);
@@ -154,7 +171,7 @@ export function makeFmt(lang: Lang) {
     return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`;
   };
 
-  return { plural, date, dayMonth, short, dateTime, dateTimeSec, today, money, number, lastDay, daysLeft, timeLeft, daysAgo };
+  return { plural, date, dayMonth, short, dateTime, dateTimeSec, today, monthYear, monthShort, money, number, lastDay, daysLeft, timeLeft, daysAgo };
 }
 
 export type Fmt = ReturnType<typeof makeFmt>;

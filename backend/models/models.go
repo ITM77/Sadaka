@@ -216,6 +216,85 @@ type SavobEntry struct {
 	EventType     string    `gorm:"size:30;not null;default:regular" json:"event_type"`
 }
 
+// События Савоб: обычные дни и праздники с множителем.
+const (
+	SavobEventRegular = "regular"
+	SavobEventRamadan = "ramadan"
+	SavobEventKurban  = "kurban"
+	SavobEventSpecial = "special_event"
+)
+
+// SavobEvents — допустимые значения SavobMode.Event.
+var SavobEvents = map[string]bool{SavobEventRegular: true, SavobEventRamadan: true, SavobEventKurban: true, SavobEventSpecial: true}
+
+// SavobModeID — у режима Савоб одна строка в таблице.
+const SavobModeID = 1
+
+// SavobMode — праздничный режим (Рамадан ×2, Курбан ×3…), который включает
+// суперадмин Комитета. Вне дат StartsAt–EndsAt действует обычный множитель ×1.
+type SavobMode struct {
+	ID          int        `gorm:"primaryKey" json:"-"`
+	Event       string     `gorm:"size:30;not null;default:regular" json:"event"`
+	Title       string     `gorm:"size:100" json:"title"` // название для special_event
+	Multiplier  float64    `gorm:"not null;default:1" json:"multiplier"`
+	StartsAt    *time.Time `json:"starts_at"`
+	EndsAt      *time.Time `json:"ends_at"` // не включительно
+	UpdatedByID *uuid.UUID `gorm:"type:uuid" json:"-"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// Active — действует ли праздничный множитель в момент now.
+func (m *SavobMode) Active(now time.Time) bool {
+	if m == nil || m.Event == SavobEventRegular || m.Multiplier <= 1 {
+		return false
+	}
+	if m.StartsAt != nil && now.Before(*m.StartsAt) {
+		return false
+	}
+	if m.EndsAt != nil && !now.Before(*m.EndsAt) {
+		return false
+	}
+	return true
+}
+
+// ---------- Уведомления ----------
+
+// Виды уведомлений. Текст собирает сайт по виду — так он переводится на таджикский.
+const (
+	NotifyMosqueApproved   = "mosque_approved"
+	NotifyMosqueRejected   = "mosque_rejected"
+	NotifyMosqueBlocked    = "mosque_blocked"
+	NotifyMosqueUnblocked  = "mosque_unblocked"
+	NotifyCampaignApproved = "campaign_approved"
+	NotifyCampaignRejected = "campaign_rejected"
+	NotifyReportApproved   = "report_approved"
+	NotifyReportRejected   = "report_rejected"
+	NotifyCampaignFinished = "campaign_finished" // жертвователям: сбор завершён, ждём отчёт
+	NotifyReportPublished  = "report_published"  // жертвователям: мечеть отчиталась
+	NotifySavobEvent       = "savob_event"       // всем: начался праздничный множитель
+)
+
+// Notification — уведомление пользователю на сайте (колокольчик в шапке).
+type Notification struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	CreatedAt   time.Time  `gorm:"index" json:"created_at"`
+	UserID      uuid.UUID  `gorm:"type:uuid;not null;index:idx_notifications_user_read" json:"-"`
+	Kind        string     `gorm:"size:30;not null" json:"kind"`
+	MosqueID    *uuid.UUID `gorm:"type:uuid" json:"mosque_id,omitempty"`
+	CampaignID  *uuid.UUID `gorm:"type:uuid" json:"campaign_id,omitempty"`
+	ObjectTitle string     `gorm:"size:255" json:"object_title"` // название сбора или мечети на момент события
+	Reason      string     `gorm:"type:text" json:"reason,omitempty"`
+	Multiplier  float64    `json:"multiplier,omitempty"`
+	ReadAt      *time.Time `gorm:"index:idx_notifications_user_read" json:"read_at"`
+}
+
+func (n *Notification) BeforeCreate(*gorm.DB) error {
+	if n.ID == uuid.Nil {
+		n.ID = uuid.New()
+	}
+	return nil
+}
+
 // ---------- Журнал действий ----------
 
 // Кто совершил действие.
@@ -230,7 +309,11 @@ const (
 	ObjectCampaign = "campaign"
 	ObjectReport   = "report"
 	ObjectAdmin    = "admin"
+	ObjectSettings = "settings" // режим Савоб
 )
+
+// SettingsObjectID — ObjectID записей журнала о настройках (у них нет своего UUID).
+var SettingsObjectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 // AuditLog — неизменяемая запись о решении или событии. Имя и роль автора,
 // название объекта копируются на момент действия: запись не меняется,
@@ -272,5 +355,6 @@ func All() []any {
 	return []any{
 		&User{}, &Admin{}, &Mosque{}, &Campaign{}, &Transaction{},
 		&Report{}, &SavobBalance{}, &SavobEntry{}, &AuditLog{},
+		&SavobMode{}, &Notification{},
 	}
 }

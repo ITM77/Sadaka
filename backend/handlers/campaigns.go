@@ -264,6 +264,9 @@ func (h *Handler) CompleteCampaign(c *gin.Context) {
 		if err := tx.Save(campaign).Error; err != nil {
 			return err
 		}
+		if err := notifyDonors(tx, campaign, models.NotifyCampaignFinished); err != nil {
+			return err
+		}
 		return logMosque(tx, c, entry)
 	})
 	if err != nil {

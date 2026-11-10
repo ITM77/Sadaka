@@ -45,12 +45,16 @@ func (h *Handler) Router() *gin.Engine {
 	api.GET("/campaigns", h.ListCampaigns)
 	api.GET("/campaigns/:id", h.GetCampaign)
 	api.GET("/reports/:id", h.GetReport)
+	api.GET("/savob/mode", h.GetSavobMode)
 
 	// Пользователь (жертвователь / представитель мечети)
 	user := api.Group("", middleware.Auth(h.Cfg.JWTSecret, utils.SubjectUser))
 	user.GET("/me", h.Me)
 	user.GET("/me/donations", h.MyDonations)
 	user.GET("/me/savob", h.MySavob)
+	user.GET("/me/notifications", h.MyNotifications)
+	user.GET("/me/notifications/unread", h.MyUnreadCount)
+	user.POST("/me/notifications/read", h.ReadNotifications)
 	user.GET("/me/mosques", h.MyMosques)
 	user.GET("/me/mosques/:id/campaigns", h.MyMosqueCampaigns)
 	user.POST("/mosques", h.CreateMosque)
@@ -64,6 +68,7 @@ func (h *Handler) Router() *gin.Engine {
 
 	// Комитет улемов
 	api.POST("/admin/auth/login", loginLimit, h.AdminLogin)
+	api.POST("/admin/auth/logout", h.AdminLogout)
 	// Код приглашения — только в теле запроса: в адресе он попал бы в логи сервера и прокси.
 	inviteLimit := middleware.RateLimit(20, 15*time.Minute)
 	api.POST("/admin/invite/lookup", inviteLimit, h.GetInvite)
@@ -81,6 +86,9 @@ func (h *Handler) Router() *gin.Engine {
 	admin.GET("/mosques/:id/campaigns", anyAdmin, h.AdminMosqueCampaigns)
 	admin.GET("/campaigns", anyAdmin, h.AdminListCampaigns)
 	admin.GET("/reports", anyAdmin, h.AdminListReports)
+	admin.GET("/analytics", anyAdmin, h.AdminAnalytics)
+	admin.GET("/savob-mode", anyAdmin, h.GetSavobMode)
+	admin.PUT("/savob-mode", superadmin, h.AdminSetSavobMode)
 
 	// Сотрудники и журнал — только суперадмин.
 	admin.GET("/staff", superadmin, h.AdminListStaff)

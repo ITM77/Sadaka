@@ -464,10 +464,5 @@ func (h *Handler) AcceptInvite(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
-	token, err := utils.IssueToken(h.Cfg.JWTSecret, admin.ID, utils.SubjectAdmin, admin.Role)
-	if err != nil {
-		utils.InternalError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"token": token, "admin": admin})
+	h.startAdminSession(c, &admin)
 }

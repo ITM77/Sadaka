@@ -3,122 +3,82 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from './api';
 
-// Сессия сотрудника Комитета улемов. Хранится отдельно от входа жертвователя.
-const TOKEN_KEY = 'sadaka_admin_token';
-const ADMIN_KEY = 'sadaka_admin';
+// Сессия сотрудника Комитета улемов живёт в httpOnly-cookie: скрипты страницы её
+// не видят, поэтому внедрённый код не украдёт вход в панель. Браузер сам
+// прикладывает cookie к запросам /api/v1/admin/*.
+
+/** Обязательный заголовок для запросов панели: защита от подделки запроса с чужого сайта. */
+export const ADMIN_HEADERS = { 'X-Sadaka-Admin': '1' };
+
+// Раньше токен лежал в localStorage — подчищаем у тех, кто входил до перехода на cookie.
+const LEGACY_KEYS = ['sadaka_admin_token', 'sadaka_admin'];
 
 export type AdminRole = 'superadmin' | 'moderator' | 'analyst';
 export type Admin = { id: string; email: string; full_name: string; role: AdminRole };
 
 type State = {
   admin: Admin | null;
-  token: string | null;
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
-  /** Вход готовым токеном — после того как сотрудник задал пароль по приглашению. */
-  startSession: (token: string, admin: Admin) => void;
+  /** Сервер уже выдал cookie (сотрудник задал пароль по приглашению) — запоминаем профиль. */
+  startSession: (admin: Admin) => void;
   logout: () => void;
-  /** Обёртка над apiFetch: подставляет токен и выкидывает на вход при 401. */
+  /** Запрос к API панели: заголовок защиты и выход на страницу входа при 401. */
   call: <T>(path: string, opts?: { method?: string; body?: unknown }) => Promise<T>;
 };
 
 const Ctx = createContext<State | null>(null);
 
-function store(key: string, value: string | null) {
-  try {
-    if (value === null) localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
-  } catch {
-    /* приватный режим */
-  }
-}
-
-function load(key: string) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<Admin | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  // Есть ли действующая сессия, какая сейчас роль и не отключён ли доступ — спрашиваем сервер.
   useEffect(() => {
-    const t = load(TOKEN_KEY);
-    const a = load(ADMIN_KEY);
-    if (t && a) {
-      try {
-        setAdmin(JSON.parse(a));
-        setToken(t);
-      } catch {
-        store(TOKEN_KEY, null);
-        store(ADMIN_KEY, null);
-      }
+    try {
+      LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* приватный режим */
     }
-    setReady(true);
-  }, []);
-
-  const logout = useCallback(() => {
-    store(TOKEN_KEY, null);
-    store(ADMIN_KEY, null);
-    setToken(null);
-    setAdmin(null);
-  }, []);
-
-  const startSession = useCallback((t: string, a: Admin) => {
-    store(TOKEN_KEY, t);
-    store(ADMIN_KEY, JSON.stringify(a));
-    setToken(t);
-    setAdmin(a);
-  }, []);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const res = await apiFetch<{ token: string; admin: Admin }>('/admin/auth/login', {
-        method: 'POST',
-        body: { email, password },
-      });
-      startSession(res.token, res.admin);
-    },
-    [startSession],
-  );
-
-  // Роль могла смениться, а доступ — отключиться: сверяемся с сервером при открытии панели.
-  useEffect(() => {
-    if (!token) return;
     let alive = true;
-    apiFetch<{ admin: Admin }>('/admin/me', { token })
-      .then((res) => {
-        if (!alive) return;
-        store(ADMIN_KEY, JSON.stringify(res.admin));
-        setAdmin(res.admin);
-      })
-      .catch((e) => {
-        if (alive && e instanceof ApiError && e.status === 401) logout();
-      });
+    apiFetch<{ admin: Admin }>('/admin/me', { headers: ADMIN_HEADERS })
+      .then((res) => alive && setAdmin(res.admin))
+      .catch(() => alive && setAdmin(null))
+      .finally(() => alive && setReady(true));
     return () => {
       alive = false;
     };
-  }, [token, logout]);
+  }, []);
 
-  const call = useCallback(
-    async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
-      try {
-        return await apiFetch<T>(path, { ...opts, token });
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 401) logout(); // токен истёк
-        throw e;
-      }
-    },
-    [token, logout],
-  );
+  const logout = useCallback(() => {
+    setAdmin(null);
+    apiFetch('/admin/auth/logout', { method: 'POST' }).catch(() => {
+      /* cookie всё равно истечёт */
+    });
+  }, []);
+
+  const startSession = useCallback((a: Admin) => setAdmin(a), []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch<{ admin: Admin }>('/admin/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    });
+    setAdmin(res.admin);
+  }, []);
+
+  const call = useCallback(async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
+    try {
+      return await apiFetch<T>(path, { ...opts, headers: ADMIN_HEADERS });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setAdmin(null); // сессия истекла или доступ отключён
+      throw e;
+    }
+  }, []);
 
   const value = useMemo(
-    () => ({ admin, token, ready, login, startSession, logout, call }),
-    [admin, token, ready, login, startSession, logout, call],
+    () => ({ admin, ready, login, startSession, logout, call }),
+    [admin, ready, login, startSession, logout, call],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -137,19 +97,20 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
 
 /** Что даёт роль — для приглашения и подтверждения смены роли. */
 export const ROLE_RIGHTS: Record<AdminRole, string> = {
-  superadmin: 'Всё, что модератор, плюс блокировка мечетей, сотрудники и журнал',
+  superadmin: 'Всё, что модератор, плюс блокировка мечетей, сотрудники, журнал и режим Савоб',
   moderator: 'Одобряет и отклоняет заявки мечетей, сборы и отчёты',
-  analyst: 'Только смотрит сводку, очереди и реестры — решений не принимает',
+  analyst: 'Только смотрит сводку, аналитику, очереди и реестры — решений не принимает',
 };
 
 /** Права по отдельности: при смене роли видно, что добавится и что уберётся. */
 export const PERMISSIONS: { label: string; roles: AdminRole[] }[] = [
-  { label: 'Видеть сводку, очереди и реестры', roles: ['superadmin', 'moderator', 'analyst'] },
+  { label: 'Видеть сводку, аналитику, очереди и реестры', roles: ['superadmin', 'moderator', 'analyst'] },
   { label: 'Одобрять и отклонять заявки мечетей', roles: ['superadmin', 'moderator'] },
   { label: 'Одобрять и отклонять сборы', roles: ['superadmin', 'moderator'] },
   { label: 'Принимать и отклонять отчёты', roles: ['superadmin', 'moderator'] },
   { label: 'Блокировать мечети и снимать блокировку', roles: ['superadmin'] },
   { label: 'Управлять сотрудниками и смотреть журнал', roles: ['superadmin'] },
+  { label: 'Включать праздничный режим Савоб', roles: ['superadmin'] },
 ];
 
 export const canModerate = (a: Admin | null) => a?.role === 'superadmin' || a?.role === 'moderator';

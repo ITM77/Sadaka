@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, ReactNode, useState } from 'react';
+import { createContext, FormEvent, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { IconAlert, IconCheck, IconClose, IconInfo, IconSearch } from '@/components/icons';
 import { ApiError, Campaign, CampaignStatus, Mosque, Report } from '@/lib/api';
 import { useI18n } from '@/lib/i18n/client';
@@ -27,6 +27,22 @@ const BUTTON = {
   danger: 'btn btn-danger',
 } as const;
 
+/**
+ * Горячие клавиши решения включены только в панели решения на вебе (QueueLayout
+ * оборачивает её в провайдер): в шторке на телефоне клавиатуры обычно нет.
+ */
+export const HotkeysContext = createContext(false);
+
+/** Клавиша без модификаторов и не в поле ввода; латиница или та же клавиша в русской раскладке. */
+function hotkey(e: KeyboardEvent, latin: string, cyr: string) {
+  const t = e.target as HTMLElement;
+  if (e.ctrlKey || e.metaKey || e.altKey || t.closest('input,textarea,select,[contenteditable],dialog[open]')) return false;
+  const k = e.key.toLowerCase();
+  return k === latin || k === cyr;
+}
+
+const KBD = 'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-md bg-app text-ink text-[11px] font-semibold';
+
 /** Кнопки модерации. Для отказа и блокировки сначала просит причину — это и есть подтверждение. */
 export function ModerationActions({
   actions,
@@ -45,9 +61,14 @@ export function ModerationActions({
   const [busy, setBusy] = useState(false);
   const [running, setRunning] = useState('');
   const [error, setError] = useState('');
+  /** A нажата один раз — ждём второе нажатие, чтобы одобрение не случилось по ошибке. */
+  const [armed, setArmed] = useState(false);
   const { t } = useI18n();
+  const hotkeys = useContext(HotkeysContext);
+  const approveRef = useRef<HTMLButtonElement>(null);
 
-  if (actions.length === 0 && !extra) return null;
+  const approve = actions.find((a) => a.key === 'approve');
+  const reject = actions.find((a) => a.key === 'reject');
 
   const run = async (a: ModAction, why = '') => {
     setBusy(true);
@@ -64,6 +85,48 @@ export function ModerationActions({
       setBusy(false);
     }
   };
+
+  // Свежие значения для обработчика клавиш без переподписки на каждый рендер.
+  const live = useRef({ approve, reject, busy, pending, armed, run });
+  live.current = { approve, reject, busy, pending, armed, run };
+
+  // A — одобрить (дважды), R — отклонить (откроет поле причины).
+  useEffect(() => {
+    if (!hotkeys) return;
+    const onKey = (e: KeyboardEvent) => {
+      const s = live.current;
+      if (s.busy || s.pending) return;
+      if (s.approve && hotkey(e, 'a', 'ф')) {
+        e.preventDefault();
+        if (s.armed) {
+          setArmed(false);
+          s.run(s.approve);
+        } else {
+          setArmed(true);
+          approveRef.current?.focus();
+        }
+      } else if (s.reject && hotkey(e, 'r', 'к')) {
+        e.preventDefault();
+        setArmed(false);
+        setPending(s.reject);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hotkeys]);
+
+  // Перешли на другую строку (J / K) — первое нажатие A на ней снова только «взводит».
+  const approvePath = approve?.path;
+  useEffect(() => setArmed(false), [approvePath]);
+
+  // Подтверждение одобрения гаснет через 3 секунды.
+  useEffect(() => {
+    if (!armed) return;
+    const id = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(id);
+  }, [armed]);
+
+  if (actions.length === 0 && !extra) return null;
 
   const submitReason = (e: FormEvent) => {
     e.preventDefault();
@@ -124,10 +187,12 @@ export function ModerationActions({
           {actions.map((a) => (
             <button
               key={a.key}
+              ref={a.key === 'approve' ? approveRef : undefined}
               type="button"
-              className={`${BUTTON[a.tone]} flex-1 sm:flex-none`}
+              className={`${BUTTON[a.tone]} flex-1 sm:flex-none ${armed && a.key === 'approve' ? 'ring-2 ring-ok ring-offset-2' : ''}`}
               disabled={busy}
               onClick={() => (a.needsReason ? setPending(a) : run(a))}
+              aria-keyshortcuts={hotkeys ? (a.key === 'approve' ? 'A' : a.key === 'reject' ? 'R' : undefined) : undefined}
             >
               {a.tone === 'primary' && <IconCheck size={18} />}
               {busy && running === a.key ? t('Сохраняем…') : t(a.label)}
@@ -135,6 +200,29 @@ export function ModerationActions({
           ))}
           {extra}
         </div>
+      )}
+      {hotkeys && !pending && (approve || reject) && (
+        <p className="flex items-center gap-1.5 flex-wrap caption" aria-live="polite">
+          {armed ? (
+            <>
+              <kbd className={KBD}>A</kbd> {t('ещё раз — одобрить')}
+            </>
+          ) : (
+            <>
+              {approve && (
+                <>
+                  <kbd className={KBD}>A</kbd> {t('одобрить')}
+                </>
+              )}
+              {approve && reject && <span aria-hidden="true">·</span>}
+              {reject && (
+                <>
+                  <kbd className={KBD}>R</kbd> {t('отклонить')}
+                </>
+              )}
+            </>
+          )}
+        </p>
       )}
       {error && (
         <p className="alert-error" role="alert">

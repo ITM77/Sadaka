@@ -150,11 +150,35 @@ func (h *Handler) AdminLogin(c *gin.Context) {
 	}
 	now := h.Now()
 	h.DB.Model(&admin).Update("last_login_at", now)
+	h.startAdminSession(c, &admin)
+}
 
+// startAdminSession выдаёт сотруднику сессию в httpOnly-cookie. Сам токен в ответ
+// не попадает: скрипты страницы до него не дотянутся.
+func (h *Handler) startAdminSession(c *gin.Context, admin *models.Admin) {
 	token, err := utils.IssueToken(h.Cfg.JWTSecret, admin.ID, utils.SubjectAdmin, admin.Role)
 	if err != nil {
 		utils.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token, "admin": admin})
+	h.setAdminCookie(c, token, int(utils.AdminTokenTTL.Seconds()))
+	c.JSON(http.StatusOK, gin.H{"admin": admin})
+}
+
+func (h *Handler) setAdminCookie(c *gin.Context, value string, maxAge int) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     middleware.AdminCookie,
+		Value:    value,
+		Path:     middleware.AdminCookiePath,
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   h.Cfg.IsProduction(), // в production сайт работает только по HTTPS
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// POST /admin/auth/logout — стереть cookie сессии.
+func (h *Handler) AdminLogout(c *gin.Context) {
+	h.setAdminCookie(c, "", -1)
+	c.Status(http.StatusNoContent)
 }

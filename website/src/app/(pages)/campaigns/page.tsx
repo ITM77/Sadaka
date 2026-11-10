@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
 import EmptyState from '@/components/EmptyState';
+import SavobBanner from '@/components/donor/SavobBanner';
 import { IconSearch } from '@/components/icons';
 import { apiFetch, Campaign, CATEGORY_LABELS, progress } from '@/lib/api';
 import { getI18n } from '@/lib/i18n/server';
@@ -73,6 +74,7 @@ export default async function Campaigns({ searchParams }: { searchParams: Params
         <h1 className="title">{t('Сборы')}</h1>
         <p className="body-text">{t('Каждый сбор одобрен Комитетом улемов. После завершения — отчёт мечети.')}</p>
       </header>
+      <SavobBanner link={false} />
 
       <form role="search" action="/campaigns" className="panel flex flex-wrap gap-2">
         {category && <input type="hidden" name="category" value={category} />}

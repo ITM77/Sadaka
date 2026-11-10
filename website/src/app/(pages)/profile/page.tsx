@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { IconHandHeart, IconLogout, IconMosque, IconSavob, IconSparkles } from '@/components/icons';
+import { IconBell, IconHandHeart, IconLogout, IconMosque, IconSavob, IconSparkles } from '@/components/icons';
 import { ApiError, apiFetch, initials, Transaction } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n/client';
+import { fetchUnread } from '@/lib/notifications';
 
 type Savob = { total_points: number; current_multiplier: number; current_event: string };
 
@@ -40,6 +41,7 @@ export default function ProfilePage() {
   const [donations, setDonations] = useState<Transaction[] | null>(null);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     if (ready && !user) router.replace('/login?next=/profile');
@@ -56,6 +58,10 @@ export default function ProfilePage() {
         setDonations(d.transactions);
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Не удалось загрузить данные'));
+    // Счётчик непрочитанных уведомлений — дешёвый запрос, ошибки не показываем
+    fetchUnread(token)
+      .then(setUnread)
+      .catch(() => {});
   }, [token]);
 
   if (!ready || !user) {
@@ -209,6 +215,11 @@ export default function ProfilePage() {
           </section>
 
           <section className="panel flex flex-col gap-2">
+            <Link href="/profile/notifications" className="btn btn-secondary btn-block">
+              <IconBell size={18} />
+              {t('Уведомления')}
+              {unread > 0 && <span className="badge badge-accent tabular">{unread}</span>}
+            </Link>
             <Link href="/cabinet" className="btn btn-secondary btn-block">
               <IconMosque size={18} />
               {t('Кабинет мечети')}

@@ -11,7 +11,7 @@ export type AuditEntry = {
   actor_name: string;
   actor_role?: AdminRole;
   action: string;
-  object_type: 'mosque' | 'campaign' | 'report' | 'admin';
+  object_type: 'mosque' | 'campaign' | 'report' | 'admin' | 'settings';
   object_id: string;
   object_title: string;
   object_subtitle?: string;
@@ -68,6 +68,7 @@ export const ACTIONS: Record<string, { label: string; tone: Tone }> = {
   'admin.disable': { label: 'Доступ отключён', tone: 'bad' },
   'admin.enable': { label: 'Доступ включён', tone: 'ok' },
   'admin.invite_accept': { label: 'Приглашение принято', tone: 'ok' },
+  'settings.savob_mode': { label: 'Режим Савоб изменён', tone: 'sec' },
   // События мечети — в истории мечети
   'mosque.submit': { label: 'Заявка подана', tone: 'neutral' },
   'mosque.resubmit': { label: 'Заявка подана повторно', tone: 'neutral' },
@@ -97,6 +98,7 @@ export const ACTION_GROUPS: { value: string; label: string; codes: string[] }[] 
       'admin.invite_accept',
     ],
   },
+  { value: 'settings', label: 'Режим Савоб', codes: ['settings.savob_mode'] },
 ];
 
 export const OBJECT_TYPES: { value: AuditEntry['object_type']; label: string; one: string }[] = [
@@ -104,6 +106,7 @@ export const OBJECT_TYPES: { value: AuditEntry['object_type']; label: string; on
   { value: 'campaign', label: 'Сборы', one: 'сбор' },
   { value: 'report', label: 'Отчёты', one: 'отчёт' },
   { value: 'admin', label: 'Сотрудники', one: 'сотрудник' },
+  { value: 'settings', label: 'Настройки', one: 'настройки' },
 ];
 
 export const objectOne = (t: AuditEntry['object_type']) => OBJECT_TYPES.find((o) => o.value === t)?.one ?? t;
@@ -119,6 +122,7 @@ const STATUS_LABELS: Record<string, Record<string, string>> = {
   },
   report: { submitted: 'На проверке', approved: 'Принят', rejected: 'Отклонён' },
   admin: { active: 'Активен', disabled: 'Отключён', ...ROLE_LABELS },
+  settings: { regular: 'Обычный режим', ramadan: 'Рамадан', kurban: 'Курбан-байрам', special_event: 'Особое событие' },
 };
 
 export function statusLabel(objectType: string, value?: string) {
@@ -136,6 +140,8 @@ export function objectHref(e: Pick<AuditEntry, 'object_type' | 'object_id' | 'ob
       return `/admin/campaigns?status=&q=${q}`;
     case 'report':
       return `/admin/reports?status=&q=${q}`;
+    case 'settings':
+      return '/admin/savob';
     default:
       return `/admin/staff?id=${e.object_id}`;
   }
@@ -163,10 +169,10 @@ export function deviceOf(ua?: string) {
   return [browser, os].filter(Boolean).join(' · ') || ua.slice(0, 60);
 }
 
-/** Скачивание CSV журнала с токеном сотрудника. */
-export async function downloadAuditCsv(query: string, token: string | null) {
+/** Скачивание CSV журнала: сессия — в cookie, плюс заголовок защиты панели. */
+export async function downloadAuditCsv(query: string) {
   const res = await fetch(`/api/v1/admin/audit/export${query ? `?${query}` : ''}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { 'X-Sadaka-Admin': '1' },
     cache: 'no-store',
   });
   if (!res.ok) {

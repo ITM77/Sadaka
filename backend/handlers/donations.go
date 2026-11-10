@@ -107,7 +107,11 @@ func (h *Handler) completeDonation(txn *models.Transaction) error {
 			return err
 		}
 
-		points := services.SavobPoints(txn.Amount, h.Cfg.SavobMultiplier)
+		multiplier, event, err := h.currentSavob(tx, h.Now())
+		if err != nil {
+			return err
+		}
+		points := services.SavobPoints(txn.Amount, multiplier)
 		txn.Status = models.TransactionStatusCompleted
 		txn.SavobEarned = points
 		if err := tx.Model(txn).Updates(map[string]any{
@@ -118,7 +122,7 @@ func (h *Handler) completeDonation(txn *models.Transaction) error {
 
 		entry := models.SavobEntry{
 			UserID: txn.UserID, TransactionID: txn.ID, Points: points,
-			Multiplier: h.Cfg.SavobMultiplier, EventType: h.Cfg.SavobEvent,
+			Multiplier: multiplier, EventType: event,
 		}
 		if err := tx.Create(&entry).Error; err != nil {
 			return err
@@ -166,10 +170,15 @@ func (h *Handler) MySavob(c *gin.Context) {
 		utils.InternalError(c, err)
 		return
 	}
+	multiplier, event, err := h.currentSavob(h.DB, h.Now())
+	if err != nil {
+		utils.InternalError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"total_points":       balance.TotalPoints,
-		"current_multiplier": h.Cfg.SavobMultiplier,
-		"current_event":      h.Cfg.SavobEvent,
+		"current_multiplier": multiplier,
+		"current_event":      event,
 		"history":            history,
 	})
 }

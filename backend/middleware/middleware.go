@@ -16,14 +16,41 @@ const (
 	ctxIssuedAt  = "issued_at"
 )
 
+// AdminCookie — httpOnly-cookie с сессией сотрудника. Скрипты страницы её не видят,
+// поэтому внедрённый на сайт код не может украсть вход в панель Комитета.
+const AdminCookie = "sadaka_admin"
+
+// AdminCookiePath — cookie уходит только в запросы к API Комитета.
+const AdminCookiePath = "/api/v1/admin"
+
+// CSRFHeader — обязательный заголовок для запросов с cookie. Чужой сайт не может
+// поставить нестандартный заголовок без разрешения CORS, а мы его не даём.
+const CSRFHeader = "X-Sadaka-Admin"
+
 // Auth требует валидный JWT нужного типа (utils.SubjectUser / utils.SubjectAdmin).
+// Жертвователь присылает токен в заголовке Authorization, сотрудник Комитета —
+// в httpOnly-cookie (плюс заголовок CSRFHeader).
 func Auth(secret, kind string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		token, ok := strings.CutPrefix(header, "Bearer ")
-		if !ok || token == "" {
-			utils.Unauthorized(c, "Требуется авторизация")
-			return
+		var token string
+		if kind == utils.SubjectAdmin {
+			cookie, err := c.Cookie(AdminCookie)
+			if err != nil || cookie == "" {
+				utils.Unauthorized(c, "Требуется авторизация")
+				return
+			}
+			if c.GetHeader(CSRFHeader) != "1" {
+				utils.Forbidden(c, "Запрос отклонён")
+				return
+			}
+			token = cookie
+		} else {
+			t, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
+			if !ok || t == "" {
+				utils.Unauthorized(c, "Требуется авторизация")
+				return
+			}
+			token = t
 		}
 		claims, err := utils.ParseToken(secret, token)
 		if err != nil {

@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, apiFetch, PAYMENT_METHODS } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n/client';
+import { fetchSavobMode, savobPoints } from '@/lib/savob';
 import { IconCard, IconCheck, IconInfo, IconLock, IconPlus, IconReport, IconSavob, IconWallet } from './icons';
 
 const PRESETS = [20, 50, 100, 500];
@@ -14,9 +15,7 @@ const STEP = 10;
 type Result = { amount: number; savob: number };
 
 /** Сколько баллов даст сумма — та же формула, что на бэкенде (1 балл за 10 TJS × множитель, минимум 1). */
-function estimateSavob(amount: number, multiplier: number) {
-  return Math.max(1, Math.floor((amount * Math.max(1, multiplier)) / 10 + 1e-9));
-}
+const estimateSavob = savobPoints;
 
 /** Lucide minus. */
 const IconMinus = () => (
@@ -65,17 +64,14 @@ export default function DonateForm({
   const overlayRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
-  // Текущий праздничный множитель Савоб — для подсказки «+N Савоб».
+  // Текущий праздничный множитель Савоб — для подсказки «+N Савоб». Виден и без входа.
   useEffect(() => {
-    if (!token) return;
     let alive = true;
-    apiFetch<{ current_multiplier: number }>('/me/savob?limit=1', { token })
-      .then((r) => alive && setMultiplier(r.current_multiplier || 1))
-      .catch(() => {});
+    fetchSavobMode().then((m) => alive && setMultiplier(m?.effective_multiplier ?? 1));
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, []);
 
   // Ошибку видно, даже если платёж отправлен из закреплённой кнопки внизу экрана.
   useEffect(() => {
@@ -180,6 +176,12 @@ export default function DonateForm({
     return (
       <div className={`${SECTION} flex flex-col gap-3 text-center`}>
         <p className="body-text">{t('Чтобы пожертвовать и получить Савоб, войдите в аккаунт.')}</p>
+        {multiplier !== null && multiplier > 1 && (
+          <p className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-accent-700">
+            <IconSavob size={16} />
+            {t('Сейчас праздник: Савоб ×{n}', { n: String(multiplier).replace('.', ',') })}
+          </p>
+        )}
         <Link href={`/login?next=${next}`} className="btn btn-primary btn-lg btn-block">
           {t('Войти и пожертвовать')}
         </Link>
@@ -353,7 +355,7 @@ export default function DonateForm({
             <IconSavob size={16} />
             {savob !== null ? `+${savob}` : '—'}
             {multiplier !== null && multiplier > 1 && savob !== null && (
-              <span className="text-body font-normal">{t('· праздник ×{n}', { n: multiplier })}</span>
+              <span className="text-body font-normal">{t('· праздник ×{n}', { n: String(multiplier).replace('.', ',') })}</span>
             )}
           </span>
         </div>

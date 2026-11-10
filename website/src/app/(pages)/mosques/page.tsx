@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
-import MosqueRow from '@/components/donor/MosqueRow';
+import MosqueBrowser from '@/components/donor/MosqueBrowser';
 import { IconCheck, IconSearch } from '@/components/icons';
 import { apiFetch, Campaign, Mosque } from '@/lib/api';
 import { getI18n } from '@/lib/i18n/server';
@@ -23,16 +23,23 @@ const STATUSES = [
   { id: 'active', label: 'Идёт сбор' },
 ] as const;
 
+const VIEWS = [
+  { id: '', label: 'Списком' },
+  { id: 'map', label: 'На карте' },
+] as const;
+
 export default async function Mosques({
   searchParams,
 }: {
-  searchParams: { q?: string; city?: string; status?: string };
+  searchParams: { q?: string; city?: string; status?: string; view?: string };
 }) {
   const { t, fmt } = getI18n();
   const q = (searchParams.q ?? '').trim();
   const city = (searchParams.city ?? '').trim();
   const status = searchParams.status === 'active' ? 'active' : '';
-  const params = new URLSearchParams({ limit: '60' });
+  const view = searchParams.view === 'map' ? 'map' : '';
+  // На карте показываем всё, что нашлось (API отдаёт не больше 100)
+  const params = new URLSearchParams({ limit: view === 'map' ? '100' : '60' });
   if (q) params.set('q', q);
   if (city) params.set('city', city);
 
@@ -58,13 +65,15 @@ export default async function Mosques({
   const filtered = !!(q || city || status);
   const allCount = everyone?.total ?? found.total;
 
-  const hrefFor = (next: { city?: string; status?: string }) => {
+  const hrefFor = (next: { city?: string; status?: string; view?: string }) => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     const c = next.city ?? selectedCity;
     const s = next.status ?? status;
+    const v = next.view ?? view;
     if (c) p.set('city', c);
     if (s) p.set('status', s);
+    if (v) p.set('view', v);
     const str = p.toString();
     return str ? `/mosques?${str}` : '/mosques';
   };
@@ -73,7 +82,24 @@ export default async function Mosques({
     <>
       {selectedCity && <input type="hidden" name="city" value={selectedCity} />}
       {status && <input type="hidden" name="status" value={status} />}
+      {view && <input type="hidden" name="view" value={view} />}
     </>
+  );
+
+  // Переключатель вида — обычные ссылки, работает и без JS
+  const switcher = (
+    <nav aria-label={t('Вид списка')} className="segmented bg-white max-sm:flex-1">
+      {VIEWS.map((v) => (
+        <Link
+          key={v.id}
+          href={hrefFor({ view: v.id })}
+          aria-current={view === v.id ? 'page' : undefined}
+          className="!min-h-11 !px-4 hover:text-accent-700 aria-[current=page]:!bg-app"
+        >
+          {t(v.label)}
+        </Link>
+      ))}
+    </nav>
   );
 
   return (
@@ -204,7 +230,7 @@ export default async function Mosques({
               {filtered ? (
                 <>
                   {t('Измените название или город.')}{' '}
-                  <Link href="/mosques" className="link-action">
+                  <Link href={view ? `/mosques?view=${view}` : '/mosques'} className="link-action">
                     {t('Сбросить поиск')}
                   </Link>
                 </>
@@ -213,16 +239,17 @@ export default async function Mosques({
               )}
             </EmptyState>
           ) : (
-            <>
-              <p className="caption !text-body px-1" aria-live="polite">
-                {t('Найдено {n} {what}', { n: total, what: fmt.plural(total, ['мечеть', 'мечети', 'мечетей']) })}
-              </p>
-              <section aria-label={t('Мечети')} className="bg-white rounded-card px-4 py-1 lg:px-5">
-                {mosques.map((m) => (
-                  <MosqueRow key={m.id} mosque={m} hasActive={activeIds.has(m.id)} large />
-                ))}
-              </section>
-            </>
+            <MosqueBrowser
+              mosques={mosques}
+              activeIds={Array.from(activeIds)}
+              view={view === 'map' ? 'map' : 'list'}
+              switcher={switcher}
+              header={
+                <p className="caption !text-body" aria-live="polite">
+                  {t('Найдено {n} {what}', { n: total, what: fmt.plural(total, ['мечеть', 'мечети', 'мечетей']) })}
+                </p>
+              }
+            />
           )}
 
           <section aria-labelledby="add-mosque" className="panel mt-1 flex flex-wrap gap-3 items-center justify-between">

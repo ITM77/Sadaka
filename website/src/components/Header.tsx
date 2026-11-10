@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { LangSwitch, useI18n } from '@/lib/i18n/client';
 import Logo from './Logo';
+import NotificationBell from './NotificationBell';
 import { IconHeart, IconHome, IconLandmark, IconUser } from './icons';
 
 /** Веб: сегментированное меню-пилюля в белой шапке 64px. */
@@ -62,9 +63,15 @@ export default function Header() {
 
           <div className="flex items-center gap-2 shrink-0">
             <LangSwitch className="hidden lg:inline-flex" />
-            <Link href="/contact" className="hidden lg:inline-flex btn btn-secondary min-h-[44px] px-4">
+            {/* С колокольчиком на 1024–1279 px места нет (таджикские подписи длиннее) — «Контакты» остаются в подвале */}
+            <Link
+              href="/contact"
+              className={`hidden ${signedIn ? 'xl:inline-flex' : 'lg:inline-flex'} btn btn-secondary min-h-[44px] px-4`}
+            >
               {t('Контакты')}
             </Link>
+            {/* Колокольчик уведомлений: на телефоне — ссылка, на вебе — выпадающий список */}
+            <NotificationBell />
             {/* На телефоне вход и профиль — в нижней панели вкладок */}
             <Link
               href={signedIn ? '/profile' : '/login'}

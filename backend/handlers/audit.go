@@ -353,6 +353,8 @@ func objectLabel(t string) string {
 		return "отчёт"
 	case models.ObjectAdmin:
 		return "сотрудник"
+	case models.ObjectSettings:
+		return "настройки"
 	}
 	return t
 }
@@ -373,6 +375,7 @@ var actionLabels = map[string]string{
 	ActStaffDisable:       "Доступ отключён",
 	ActStaffEnable:        "Доступ включён",
 	ActStaffInviteAccept:  "Приглашение принято",
+	ActSavobMode:          "Режим Савоб изменён",
 }
 
 func actionLabel(a string) string {

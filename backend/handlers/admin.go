@@ -293,12 +293,23 @@ func (h *Handler) moderateMosque(c *gin.Context, from []string, to string, reaso
 		if err := tx.Save(&mosque).Error; err != nil {
 			return err
 		}
+		if err := notifyOwner(tx, &mosque, mosqueNotifyKind[action], nil, reason); err != nil {
+			return err
+		}
 		return logAdmin(tx, c, entry)
 	})
 	if !h.handleTxError(c, err, "мечеть не найдена") {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"mosque": mosque})
+}
+
+// Какое уведомление получает мечеть после решения.
+var mosqueNotifyKind = map[string]string{
+	ActMosqueApprove: models.NotifyMosqueApproved,
+	ActMosqueReject:  models.NotifyMosqueRejected,
+	ActMosqueBlock:   models.NotifyMosqueBlocked,
+	ActMosqueUnblock: models.NotifyMosqueUnblocked,
 }
 
 // POST /admin/mosques/:id/approve
@@ -414,6 +425,13 @@ func (h *Handler) moderateCampaign(c *gin.Context, approve bool) {
 		if err := tx.Save(campaign).Error; err != nil {
 			return err
 		}
+		kind := models.NotifyCampaignApproved
+		if !approve {
+			kind = models.NotifyCampaignRejected
+		}
+		if err := notifyOwner(tx, &mosque, kind, campaign, reason); err != nil {
+			return err
+		}
 		return logAdmin(tx, c, entry)
 	})
 	if !h.handleTxError(c, err, "кампания не найдена") {
@@ -486,6 +504,19 @@ func (h *Handler) moderateReport(c *gin.Context, approve bool) {
 		report.ModerationNote = reason
 		if err := tx.Save(&report).Error; err != nil {
 			return err
+		}
+		kind := models.NotifyReportApproved
+		if !approve {
+			kind = models.NotifyReportRejected
+		}
+		if err := notifyOwner(tx, &mosque, kind, &campaign, reason); err != nil {
+			return err
+		}
+		// Жертвователи узнают, на что ушли их деньги, только после проверки Комитетом.
+		if approve {
+			if err := notifyDonors(tx, &campaign, models.NotifyReportPublished); err != nil {
+				return err
+			}
 		}
 		return logAdmin(tx, c, entry)
 	})
